@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+{% block title %}{{ 'Event Wish List'|tr:preferred_language }} — {{ 'Event Registration Platform'|tr:preferred_language }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-heart-fill me-2 text-danger"></i>{{ 'Event Wish List'|tr:preferred_language }}</h2>
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">{{ 'Home'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item active">{{ 'Event Wish List'|tr:preferred_language }}</li>
+    </ol>
+  </nav>
+</div>
+
+<div class="card">
+  <div class="card-header-custom">
+    <h5>{{ 'All Wishlisted Events'|tr:preferred_language }}</h5>
+    <a href="{% url 'add_event_user_wish' %}" class="btn btn-danger btn-sm">
+      <i class="bi bi-heart-plus me-1"></i>{{ 'Add to Wishlist'|tr:preferred_language }}
+    </a>
+  </div>
+  <div class="p-0">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th>#</th><th>{{ 'Username'|tr:preferred_language }}</th><th>{{ 'Event'|tr:preferred_language }}</th>
+          <th>{{ 'Event Status'|tr:preferred_language }}</th><th>{{ 'User Reg. Status'|tr:preferred_language }}</th><th>{{ 'Added'|tr:preferred_language }}</th><th>{{ 'Action'|tr:preferred_language }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for w in wishes %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>{{ w.user.username }}</td>
+          <td><a href="{% url 'event_detail' w.event.pk %}">{{ w.event.title }}</a></td>
+          <td><span class="badge-status badge-{{ w.event.status }}">{{ w.event.status|title }}</span></td>
+          <td>
+            {% if w.event_user_status %}
+              <span class="badge-status badge-{{ w.event_user_status }}">{{ w.event_user_status|title }}</span>
+            {% else %}
+              <span class="text-muted">{{ 'Not Registered'|tr:preferred_language }}</span>
+            {% endif %}
+          </td>
+          <td>{{ w.added_at|date:"d M Y" }}</td>
+          <td>
+            {% if user.is_staff %}
+            <a href="{% url 'remove_event_user_wish' w.pk %}" class="btn-del">
+              <i class="bi bi-heart-break"></i>
+            </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+          <tr><td colspan="7" class="text-center text-muted py-4">{{ 'No Wishlist Entries Found'|tr:preferred_language }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+{% block title %}{{ 'Register for'|tr:preferred_language }} {{ event.title }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-pencil-square me-2 text-primary"></i>{{ 'Register for Event'|tr:preferred_language }}</h2>
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">{{ 'Home'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'event_detail' event.pk %}">{{ event.title }}</a></li>
+      <li class="breadcrumb-item active">{{ 'Register'|tr:preferred_language }}</li>
+    </ol>
+  </nav>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <h5 class="card-title mb-3">{{ event.title }}</h5>
+    <p class="text-muted mb-4">{{ event.category.name|default:event.get_event_type_display }}</p>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-3">
+        {{ form.first_name.label_tag }}
+        {{ form.first_name }}
+        {{ form.first_name.errors }}
+      </div>
+      <div class="mb-3">
+        {{ form.last_name.label_tag }}
+        {{ form.last_name }}
+        {{ form.last_name.errors }}
+      </div>
+      <div class="mb-3">
+        {{ form.email.label_tag }}
+        {{ form.email }}
+        {{ form.email.errors }}
+      </div>
+      <div class="mb-3">
+        {{ form.phone.label_tag }}
+        {{ form.phone }}
+        {{ form.phone.errors }}
+      </div>
+      <div class="mb-3">
+        {{ form.gender.label_tag }}
+        {{ form.gender }}
+        {{ form.gender.errors }}
+      </div>
+      <div class="mb-3">
+        {{ form.role.label_tag }}
+        {{ form.role }}
+        {{ form.role.errors }}
+      </div>
+      <div id="student-fields" class="mb-3 d-none">
+        <div class="mb-3">
+          {{ form.college_name.label_tag }}
+          {{ form.college_name }}
+          {{ form.college_name.errors }}
+        </div>
+        <div class="mb-3">
+          {{ form.year_of_study.label_tag }}
+          {{ form.year_of_study }}
+          {{ form.year_of_study.errors }}
+        </div>
+        <div class="mb-3">
+          {{ form.year_of_passing.label_tag }}
+          {{ form.year_of_passing }}
+          {{ form.year_of_passing.errors }}
+        </div>
+      </div>
+      <div id="professional-fields" class="mb-3 d-none">
+        <div class="mb-3">
+          {{ form.company_name.label_tag }}
+          {{ form.company_name }}
+          {{ form.company_name.errors }}
+        </div>
+        <div class="mb-3">
+          {{ form.job_title.label_tag }}
+          {{ form.job_title }}
+          {{ form.job_title.errors }}
+        </div>
+        <div class="mb-3">
+          {{ form.industry.label_tag }}
+          {{ form.industry }}
+          {{ form.industry.errors }}
+        </div>
+      </div>
+      {% if show_payment_fields %}
+      <div class="alert alert-info">
+        <div class="fw-semibold">Amount to pay: ₹{{ event.price }}</div>
+        <div class="small">Choose your preferred payment mode and provide your UPI ID to complete registration.</div>
+      </div>
+      <div class="mb-3">
+        {{ form.payment_mode.label_tag }}
+        {{ form.payment_mode }}
+        {{ form.payment_mode.errors }}
+      </div>
+      <div class="mb-3" id="other-payment-wrap" style="display:none;">
+        {{ form.other_payment_mode.label_tag }}
+        {{ form.other_payment_mode }}
+        {{ form.other_payment_mode.errors }}
+      </div>
+      <div class="mb-3">
+        {{ form.upi_id.label_tag }}
+        {{ form.upi_id }}
+        {{ form.upi_id.errors }}
+      </div>
+      {% endif %}
+      <div class="mt-4">
+        {% if show_payment_fields %}
+        <button type="submit" class="btn btn-primary" formaction="{% url 'pay_event_redirect' event.pk %}">Pay & Continue</button>
+        {% else %}
+        <button type="submit" class="btn btn-primary">{{ 'Register'|tr:preferred_language }}</button>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function updateRoleFields() {
+    const role = document.getElementById('id_role').value;
+    const student = document.getElementById('student-fields');
+    const professional = document.getElementById('professional-fields');
+    if (role === 'student') {
+      student.classList.remove('d-none');
+      professional.classList.add('d-none');
+    } else if (role === 'working_professional') {
+      professional.classList.remove('d-none');
+      student.classList.add('d-none');
+    } else {
+      student.classList.add('d-none');
+      professional.classList.add('d-none');
+    }
+  }
+  function updatePaymentFields() {
+    const paymentMode = document.getElementById('id_payment_mode');
+    const otherWrap = document.getElementById('other-payment-wrap');
+    if (!paymentMode || !otherWrap) return;
+    otherWrap.style.display = paymentMode.value === 'other' ? 'block' : 'none';
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    updateRoleFields();
+    updatePaymentFields();
+    document.getElementById('id_role').addEventListener('change', updateRoleFields);
+    const paymentMode = document.getElementById('id_payment_mode');
+    if (paymentMode) {
+      paymentMode.addEventListener('change', updatePaymentFields);
+    }
+  });
+</script>
+{% endblock %}

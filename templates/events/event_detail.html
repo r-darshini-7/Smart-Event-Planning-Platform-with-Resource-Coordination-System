@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+{% block title %}{{ event.title }} — {{ 'Event Detail'|tr:preferred_language }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-calendar-event me-2 text-primary"></i>{{ event.title }}</h2>
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">{{ 'Home'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'event_list' %}">{{ 'Event List'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item active">{{ 'Detail'|tr:preferred_language }}</li>
+    </ol>
+  </nav>
+</div>
+
+<div class="row g-4">
+  <!-- Left Column: Info (full width for users) -->
+  {% if not user.is_staff %}
+    <div class="col-lg-12">
+  {% else %}
+    <div class="col-lg-8">
+  {% endif %}
+    <style>
+      .full-event-card { background: #ffffff; border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 6px 18px rgba(15,40,80,0.06); }
+      .register-btn { display:block; width:100%; }
+    </style>
+
+    <div class="card mb-4 full-event-card">
+      <div class="card-header-custom"><h5>{{ 'Event Information'|tr:preferred_language }}</h5></div>
+      <div class="card-body" style="background:#ffffff; border-radius:8px;">
+          <!-- removed UID/Category/Session/Speaker blocks for user view per design -->
+          <div class="col-12 mb-3">
+            {% if event.image %}
+              <img src="{{ event.image.url }}" alt="{{ event.title }}" style="width:100%; height:320px; object-fit:cover; border-radius:12px;" />
+            {% else %}
+              <div style="width:100%; height:320px; background:#f1f5f9; border-radius:12px;"></div>
+            {% endif %}
+          </div>
+          <div class="col-12 mb-2">
+            <h2 class="mb-1" style="font-size:1.8rem; line-height:1.1;">{{ event.title }}</h2>
+            <div class="text-muted small mb-2">{{ event.category.name|default:event.get_event_type_display }}</div>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+              <span class="badge bg-light text-dark" style="padding:.45rem .7rem; border-radius:8px;">📍 {{ event.venue_name|default:event.location|default:'—' }}</span>
+              <span class="badge bg-light text-dark" style="padding:.45rem .7rem; border-radius:8px;">👥 Team Size: {{ event.max_attendance }}</span>
+            </div>
+          </div>
+
+          <div class="col-12 mb-3 d-flex gap-3">
+            <div style="min-width:84px; text-align:center;">
+              <div style="width:64px; height:64px; background:#e6f0ff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:600; color:#0b63d6;">{{ event.start_time|date:"d" }}</div>
+              <div class="small text-muted mt-1">{{ event.start_time|date:"M Y" }}</div>
+            </div>
+            <div style="min-width:84px; text-align:center;">
+              <div style="width:64px; height:64px; background:#ffeede; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:600; color:#d97706;">{{ event.end_time|date:"d" }}</div>
+              <div class="small text-muted mt-1">{{ event.end_time|date:"M Y" }}</div>
+            </div>
+            <div class="flex-grow-1">
+              <div class="small text-muted">Start: {{ event.start_time|date:"d M Y, H:i" }}</div>
+              <div class="small text-muted">End: &nbsp;&nbsp;{{ event.end_time|date:"d M Y, H:i" }}</div>
+            </div>
+          </div>
+
+          <div class="col-12 mb-3">
+            <h6 class="mb-2">{{ 'About'|tr:preferred_language }}</h6>
+            {% with no_desc='No description.'|tr:preferred_language %}
+              <p class="text-muted">{{ event.description|default:no_desc }}</p>
+            {% endwith %}
+          </div>
+
+          <div class="col-12 mb-4">
+            <div class="border rounded p-3 mb-3 bg-light">
+              <div class="d-flex justify-content-between align-items-start gap-3">
+                <div>
+                  <div class="small text-muted">Entry Fee</div>
+                  <div class="fw-bold">{% if event.price > 0 %}₹{{ event.price }}{% else %}Free{% endif %}</div>
+                </div>
+                {% if event.qr_code_image %}
+                  <img src="{{ event.qr_code_image.url }}" alt="Payment QR Code" style="max-width:140px; max-height:140px; object-fit:contain; border-radius:8px; background:#fff;" />
+                {% endif %}
+              </div>
+              {% if event.price > 0 and not event.qr_code_image %}
+                <div class="small text-muted mt-2">Admin has not uploaded a payment QR code yet.</div>
+              {% endif %}
+            </div>
+            {% if user.is_authenticated %}
+              {% if is_registered %}
+                <button class="btn btn-success register-btn" disabled>Registered</button>
+              {% else %}
+                <a href="{% url 'register_event' event.pk %}" class="btn btn-primary register-btn">Register Now</a>
+              {% endif %}
+            {% else %}
+              <a href="{% url 'login' %}?next={% url 'event_detail' event.pk %}" class="btn btn-outline-primary register-btn">Sign in to register</a>
+            {% endif %}
+          </div>
+            </div>
+          </div>
+            {% if user.is_staff %}
+          <div class="col-sm-6">
+            <p class="text-muted small mb-1">{{ 'Start Time'|tr:preferred_language }}</p>
+            <p>{{ event.start_time|date:"d M Y, H:i" }}</p>
+          </div>
+          <div class="col-sm-6">
+            <p class="text-muted small mb-1">{{ 'End Time'|tr:preferred_language }}</p>
+            <p>{{ event.end_time|date:"d M Y, H:i" }}</p>
+          </div>
+          <div class="col-sm-6">
+            <p class="text-muted small mb-1">{{ 'Venue'|tr:preferred_language }}</p>
+            <p>{{ event.venue_name|default:"—" }}</p>
+          </div>
+          <div class="col-sm-6">
+            <p class="text-muted small mb-1">{{ 'Location'|tr:preferred_language }}</p>
+            <p>{{ event.location|default:"—" }}</p>
+          </div>
+          {% if event.map_latitude and event.map_longitude %}
+          <div class="col-12">
+            <div id="event-detail-map" class="position-relative" style="min-height:320px; background:#f8fafc; border-radius:var(--radius);"></div>
+          </div>
+          {% endif %}
+          <div class="col-sm-4">
+            <p class="text-muted small mb-1">{{ 'Price'|tr:preferred_language }}</p>
+            <p class="fw-semibold">₹{{ event.price }}</p>
+          </div>
+          <div class="col-sm-4">
+            <p class="text-muted small mb-1">{{ 'Points'|tr:preferred_language }}</p>
+            <p class="fw-semibold">{{ event.points }}</p>
+          </div>
+          <div class="col-sm-4">
+            <p class="text-muted small mb-1">{{ 'Max Attendance'|tr:preferred_language }}</p>
+            <p class="fw-semibold">{{ event.max_attendance }}</p>
+          </div>
+          <div class="col-sm-4">
+            <p class="text-muted small mb-1">{{ 'Job Category'|tr:preferred_language }}</p>
+            <p>{{ event.get_job_category_display }}</p>
+          </div>
+          <div class="col-sm-4">
+            <p class="text-muted small mb-1">{{ 'Status'|tr:preferred_language }}</p>
+            <span class="badge-status badge-{{ event.status }}">{{ event.status|title }}</span>
+          </div>
+          <div class="col-12">
+            <p class="text-muted small mb-1">{{ 'Description'|tr:preferred_language }}</p>
+            {% with no_desc='No description.'|tr:preferred_language %}
+              <p>{{ event.description|default:no_desc }}</p>
+            {% endwith %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    </div>
+
+  {% if user.is_staff %}
+  <!-- Right Column: Image + Quick Stats (admin only) -->
+  <div class="col-lg-4">
+    {% if event.image %}
+    <div class="card mb-3">
+      <img src="{{ event.image.url }}" class="card-img-top" style="border-radius:var(--radius);" alt="{{ event.title }}">
+    </div>
+    {% endif %}
+
+    <div class="card mb-3">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3">{{ 'Quick Stats'|tr:preferred_language }}</h6>
+        <div class="d-flex justify-content-between py-2 border-bottom">
+          <span class="text-muted">{{ 'Registrations'|tr:preferred_language }}</span>
+          <span class="fw-semibold">{{ members.count }} / {{ event.max_attendance }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-2 border-bottom">
+          <span class="text-muted">{{ 'Wishlists'|tr:preferred_language }}</span>
+          <span class="fw-semibold">{{ wishes.count }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-2">
+          <span class="text-muted">{{ 'Marks Created'|tr:preferred_language }}</span>
+          <span class="fw-semibold">{{ marks.count }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex flex-column gap-2">
+      <a href="{% url 'create_event' %}?edit={{ event.pk }}" class="btn-edit w-100 justify-content-center py-2">
+        <i class="bi bi-pencil me-1"></i>{{ 'Edit Event'|tr:preferred_language }}
+      </a>
+      <a href="{% url 'delete_event' event.pk %}" class="btn-del w-100 justify-content-center py-2">
+        <i class="bi bi-trash me-1"></i>{{ 'Delete Event'|tr:preferred_language }}
+      </a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var detailMap = document.getElementById('event-detail-map');
+    if (!detailMap || typeof L === 'undefined') return;
+
+    var lat = {{ event.map_latitude|default:'null' }};
+    var lng = {{ event.map_longitude|default:'null' }};
+    if (lat === null || lng === null) return;
+
+    var map = L.map(detailMap).setView([lat, lng], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(map);
+    L.marker([lat, lng]).addTo(map);
+  });
+</script>
+{% endblock %}

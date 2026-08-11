@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+{% block title %}{{ 'Edit Event'|tr:preferred_language }} — {{ 'Event Registration Platform'|tr:preferred_language }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-pencil-square me-2 text-warning"></i>{{ 'Edit Event'|tr:preferred_language }}</h2>
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">{{ 'Home'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'event_list' %}">{{ 'Event List'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item active">{{ 'Edit'|tr:preferred_language }}</li>
+    </ol>
+  </nav>
+</div>
+
+<form method="post" enctype="multipart/form-data" novalidate>
+{% csrf_token %}
+<div class="form-section mb-4">
+  <div class="form-section-header">
+    <h5><i class="bi bi-pencil-square me-2"></i>Edit: {{ event.title }}</h5>
+  </div>
+  <div class="form-section-body">
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label">{{ 'UID'|tr:preferred_language }} <span class="text-danger">*</span></label>{{ form.uid }}
+        {% if form.uid.errors %}<div class="text-danger small">{{ form.uid.errors }}</div>{% endif %}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">{{ 'Title'|tr:preferred_language }} <span class="text-danger">*</span></label>{{ form.title }}
+        {% if form.title.errors %}<div class="text-danger small">{{ form.title.errors }}</div>{% endif %}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">{{ 'Category'|tr:preferred_language }}</label>{{ form.category }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">{{ 'Description'|tr:preferred_language }}</label>{{ form.description }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">{{ 'Image'|tr:preferred_language }}</label>
+        {% if event.image %}
+          <div class="mb-1"><img src="{{ event.image.url }}" height="48" style="border-radius:4px;"></div>
+        {% endif %}
+        {{ form.image }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">{{ 'Session Name'|tr:preferred_language }}</label>{{ form.session_name }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">{{ 'Speaker Name'|tr:preferred_language }}</label>{{ form.speaker_name }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">{{ 'Start Time'|tr:preferred_language }} <span class="text-danger">*</span></label>{{ form.start_time }}
+        {% if form.start_time.errors %}<div class="text-danger small">{{ form.start_time.errors }}</div>{% endif %}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">{{ 'End Time'|tr:preferred_language }} <span class="text-danger">*</span></label>{{ form.end_time }}
+        {% if form.end_time.errors %}<div class="text-danger small">{{ form.end_time.errors }}</div>{% endif %}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">{{ 'Venue Name'|tr:preferred_language }}</label>{{ form.venue_name }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">{{ 'Location'|tr:preferred_language }}</label>{{ form.location }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">{{ 'Event Location'|tr:preferred_language }}</label>
+        {{ form.map_latitude }}
+        {{ form.map_longitude }}
+        <div id="edit-event-map" class="mb-2 border rounded" style="min-height:220px; background:#f8fafc;"></div>
+        <div class="form-text text-muted">{{ 'Click the map to move the pin and use zoom controls to position the event.'|tr:preferred_language }}</div>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">{{ 'Price'|tr:preferred_language }} (₹)</label>{{ form.price }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">{{ 'Points'|tr:preferred_language }}</label>{{ form.points }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">{{ 'Max Attendance'|tr:preferred_language }}</label>{{ form.max_attendance }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">{{ 'Status'|tr:preferred_language }}</label>{{ form.status }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">{{ 'Job Category'|tr:preferred_language }}</label>{{ form.job_category }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var latField = document.getElementById('id_map_latitude');
+    var lngField = document.getElementById('id_map_longitude');
+    var mapEl = document.getElementById('edit-event-map');
+    if (!mapEl || typeof L === 'undefined') return;
+
+    var initialLat = parseFloat(latField.value) || 20.5937;
+    var initialLng = parseFloat(lngField.value) || 78.9629;
+    var map = L.map(mapEl).setView([initialLat, initialLng], latField.value && lngField.value ? 13 : 5);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(map);
+
+    var marker;
+    function setMarker(lat, lng) {
+      if (marker) {
+        marker.setLatLng([lat, lng]);
+      } else {
+        marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+        marker.on('dragend', function(event) {
+          var pos = event.target.getLatLng();
+          updateCoordinates(pos.lat, pos.lng);
+        });
+      }
+      updateCoordinates(lat, lng);
+    }
+
+    function updateCoordinates(lat, lng) {
+      latField.value = lat.toFixed(6);
+      lngField.value = lng.toFixed(6);
+    }
+
+    map.on('click', function(event) {
+      setMarker(event.latlng.lat, event.latlng.lng);
+    });
+
+    if (latField.value && lngField.value) {
+      setMarker(initialLat, initialLng);
+      map.setView([initialLat, initialLng], 13);
+    }
+  });
+</script>
+
+{% if form.non_field_errors %}
+  <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+{% endif %}
+
+<div class="d-flex gap-2">
+  <button type="submit" class="btn-submit"><i class="bi bi-save me-1"></i>{{ 'Update Event'|tr:preferred_language }}</button>
+  <a href="{% url 'event_list' %}" class="btn-cancel">{{ 'Cancel'|tr:preferred_language }}</a>
+</div>
+</form>
+{% endblock %}

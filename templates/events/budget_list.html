@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}Budget Management{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-cash-stack me-2 text-primary"></i>Budget Management</h2>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="stat-card" style="background:#3b82f6;">
+      <div class="stat-num">₹{{ total_projected }}</div>
+      <div class="stat-label">Total Projected</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card" style="background:#22c55e;">
+      <div class="stat-num">₹{{ total_actual }}</div>
+      <div class="stat-label">Total Actual Spend</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card" style="background:#f59e0b;">
+      <div class="stat-num">{{ budget_items.count }}</div>
+      <div class="stat-label">Budget Items</div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header-custom">
+    <h5>Filter by Event</h5>
+  </div>
+  <div class="card-body">
+    <form method="get" class="d-flex gap-2 align-items-center">
+      <select name="event" class="form-select w-auto">
+        <option value="">All Events</option>
+        {% for e in events %}<option value="{{ e.pk }}" {% if selected_event and selected_event.pk == e.pk %}selected{% endif %}>{{ e.title }}</option>{% endfor %}
+      </select>
+      <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+      {% if selected_event %}
+      <a href="{% url 'export_budget_csv' selected_event.pk %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1"></i>Export CSV</a>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header-custom">
+    <h5>Budget Items {% if selected_event %}— {{ selected_event.title }}{% endif %}</h5>
+    <a href="{% url 'budget_item_create' %}" class="btn btn-success btn-sm"><i class="bi bi-plus-circle me-1"></i>Add Item</a>
+  </div>
+  <div class="p-0">
+    <table class="table-custom">
+      <thead><tr><th>#</th><th>Event</th><th>Category</th><th>Description</th><th>Projected</th><th>Actual</th><th>Vendor</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for item in budget_items %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>{{ item.event.title }}</td>
+          <td>{{ item.get_category_display }}</td>
+          <td>{{ item.description }}</td>
+          <td>₹{{ item.projected_amount }}</td>
+          <td>₹{{ item.actual_amount }}</td>
+          <td>{{ item.vendor.name|default:"—" }}</td>
+          <td><span class="badge-status badge-{{ item.status }}">{{ item.get_status_display }}</span></td>
+          <td>
+            <a href="{% url 'budget_item_edit' item.pk %}" class="btn-edit"><i class="bi bi-pencil"></i></a>
+            {% if item.status == 'pending' %}
+            <form method="post" action="{% url 'budget_item_approve' item.pk %}" class="d-inline">{% csrf_token %}
+              <input type="hidden" name="action" value="approve">
+              <button class="btn btn-sm btn-success" title="Approve"><i class="bi bi-check"></i></button>
+            </form>
+            <form method="post" action="{% url 'budget_item_approve' item.pk %}" class="d-inline">{% csrf_token %}
+              <input type="hidden" name="action" value="reject">
+              <button class="btn btn-sm btn-warning" title="Reject"><i class="bi bi-x"></i></button>
+            </form>
+            {% endif %}
+            <a href="{% url 'budget_item_delete' item.pk %}" class="btn-del"><i class="bi bi-trash"></i></a>
+          </td>
+        </tr>
+        {% empty %}<tr><td colspan="9" class="text-center text-muted py-3">No budget items.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

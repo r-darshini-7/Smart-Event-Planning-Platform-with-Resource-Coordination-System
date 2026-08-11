@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+{% block title %}{{ 'Delete Category'|tr:preferred_language }} — {{ 'Event Registration Platform'|tr:preferred_language }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-trash3 me-2 text-danger"></i>{{ 'Delete Category'|tr:preferred_language }}</h2>
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">{{ 'Home'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'event_category' %}">{{ 'Category List'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item active">{{ 'Delete'|tr:preferred_language }}</li>
+    </ol>
+  </nav>
+</div>
+
+<div class="card">
+  <div class="card-body p-4 text-center">
+    <div class="mb-3" style="font-size:3.5rem; color:#ef4444;">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+    </div>
+    <h4 class="fw-bold mb-1">{{ 'Confirm Deletion'|tr:preferred_language }}</h4>
+    <p class="text-muted mb-1">{{ 'You are about to permanently delete:'|tr:preferred_language }}</p>
+    <p class="fw-semibold fs-5 text-danger mb-4">{{ category.name }} ({{ category.code }})</p>
+    <p class="text-muted small">{{ 'This action cannot be undone. All events associated with this category will lose their category reference.'|tr:preferred_language }}</p>
+    <form method="post" class="d-flex justify-content-center gap-3 mt-4">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger px-4 fw-semibold">
+        <i class="bi bi-trash me-1"></i>{{ 'Yes, Delete'|tr:preferred_language }}
+      </button>
+      <a href="{% url 'event_category' %}" class="btn btn-secondary px-4">{{ 'Cancel'|tr:preferred_language }}</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

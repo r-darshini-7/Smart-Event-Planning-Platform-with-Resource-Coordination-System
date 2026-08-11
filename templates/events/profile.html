@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+{% block title %}{{ 'Profile'|tr:preferred_language }} — {{ 'Event Registration Platform'|tr:preferred_language }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  #main-wrap { min-height:100vh; background:#f8fafc; }
+  .profile-card{ max-width:920px; margin:3rem auto; background:#fff; border-radius:18px; box-shadow:0 30px 70px rgba(15,23,42,.12); overflow:hidden; }
+  .profile-banner{ background:#2563eb; padding:2.5rem; color:#fff; }
+  .profile-banner h2{ margin:0; font-size:2rem; }
+  .profile-banner p{ opacity:.85; margin-top:.45rem; }
+  .profile-body{ display:grid; gap:2rem; padding:2rem; grid-template-columns:280px minmax(0,1fr); }
+  .profile-sidebar{ background:#f1f5f9; border-radius:16px; padding:1.75rem; }
+  .profile-avatar{ width:120px; height:120px; border-radius:50%; background:#fff; border:6px solid #fff; display:flex; align-items:center; justify-content:center; font-size:3rem; color:#2563eb; margin:0 auto; overflow:hidden; }
+  .profile-avatar img{ width:100%; height:100%; object-fit:cover; }
+  .profile-meta{ text-align:center; margin-top:1rem; }
+  .profile-meta h3{ margin-bottom:.25rem; }
+  .profile-meta p{ color:#475569; margin:0; }
+  .profile-details{ background:#fff; border-radius:16px; padding:1.75rem; box-shadow:0 10px 30px rgba(15,23,42,.06); }
+  .profile-details h4{ margin-bottom:1.2rem; font-size:1.25rem; }
+  .form-grid{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
+  .profile-details .form-label{font-weight:600;}
+  .profile-details .btn-submit{width:100%;}
+  .profile-details .form-text{color:#64748b;}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-card">
+  <div class="profile-banner">
+    <h2>{{ 'My Profile'|tr:preferred_language }}</h2>
+    <p>{{ 'Keep your profile information up to date for better event coordination.'|tr:preferred_language }}</p>
+  </div>
+  <div class="profile-body">
+    <aside class="profile-sidebar">
+      <div class="profile-avatar">
+        {% if form.instance.image %}
+          <img src="{{ form.instance.image.url }}" alt="Profile Image" />
+        {% else %}
+          {{ request.user.first_name|default:request.user.username|slice:":1"|upper }}
+        {% endif %}
+      </div>
+      <div class="profile-meta">
+        <h3>{{ request.user.get_full_name|default:request.user.username }}</h3>
+        <p>{{ request.user.email }}</p>
+      </div>
+      <div class="mt-4">
+        <p class="mb-1"><strong>{{ 'Phone'|tr:preferred_language }}</strong></p>
+        <p>{{ form.instance.phone|default:'—' }}</p>
+      </div>
+      <div>
+        <p class="mb-1"><strong>{{ 'College'|tr:preferred_language }}</strong></p>
+        <p>{{ form.instance.organization|default:'—' }}</p>
+      </div>
+      <div>
+        <p class="mb-1"><strong>{{ 'Location'|tr:preferred_language }}</strong></p>
+        <p>{{ form.instance.location|default:'—' }}</p>
+      </div>
+    </aside>
+
+    <section class="profile-details">
+      <h4>{{ 'Edit Profile'|tr:preferred_language }}</h4>
+      {% if messages %}
+        {% for msg in messages %}
+          <div class="alert alert-{{ msg.tags|default:'info' }}">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-grid">
+          <div class="mb-3">
+            {{ form.image.label_tag }}
+            {{ form.image }}
+            <div class="form-text">{{ 'Upload a profile image (JPG, PNG, WebP).'|tr:preferred_language }}</div>
+          </div>
+          <div class="mb-3">
+            {{ form.first_name.label_tag }}
+            {{ form.first_name }}
+          </div>
+          <div class="mb-3">
+            {{ form.last_name.label_tag }}
+            {{ form.last_name }}
+          </div>
+          <div class="mb-3">
+            {{ form.father_name.label_tag }}
+            {{ form.father_name }}
+          </div>
+          <div class="mb-3">
+            {{ form.dob.label_tag }}
+            {{ form.dob }}
+          </div>
+          <div class="mb-3">
+            {{ form.phone.label_tag }}
+            {{ form.phone }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">{{ 'Email Address'|tr:preferred_language }}</label>
+            <input type="email" class="form-control" value="{{ request.user.email }}" readonly />
+          </div>
+          <div class="mb-3">
+            {{ form.organization.label_tag }}
+            {{ form.organization }}
+          </div>
+          <div class="mb-3">
+            {{ form.location.label_tag }}
+            {{ form.location }}
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-submit">{{ 'Save Profile'|tr:preferred_language }}</button>
+      </form>
+    </section>
+  </div>
+</div>
+{% endblock %}

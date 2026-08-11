@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}Resource Allocations{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-diagram-3 me-2 text-primary"></i>Resource Allocations</h2>
+</div>
+<div class="card">
+  <div class="card-header-custom">
+    <h5>Allocations</h5>
+    <a href="{% url 'resource_allocation_create' %}" class="btn btn-success btn-sm"><i class="bi bi-plus-circle me-1"></i>Allocate Resource</a>
+  </div>
+  <div class="p-0">
+    <table class="table-custom">
+      <thead><tr><th>#</th><th>Resource</th><th>Event</th><th>Qty</th><th>From</th><th>To</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for a in allocations %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>{{ a.resource.name }}</td>
+          <td>{{ a.event.title }}</td>
+          <td>{{ a.quantity }}</td>
+          <td>{{ a.start_time|date:"d M Y" }}</td>
+          <td>{{ a.end_time|date:"d M Y" }}</td>
+          <td><span class="badge-status badge-{{ a.status }}">{{ a.get_status_display }}</span></td>
+          <td>
+            <form method="post" action="{% url 'resource_allocation_update' a.pk %}" class="d-inline">
+              {% csrf_token %}
+              <select name="status" class="form-select form-select-sm d-inline w-auto">
+                <option value="allocated" {% if a.status == 'allocated' %}selected{% endif %}>Allocated</option>
+                <option value="returned" {% if a.status == 'returned' %}selected{% endif %}>Returned</option>
+                <option value="cancelled" {% if a.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+              </select>
+              <button type="submit" class="btn btn-sm btn-primary">Update</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}<tr><td colspan="8" class="text-center text-muted py-3">No allocations yet.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

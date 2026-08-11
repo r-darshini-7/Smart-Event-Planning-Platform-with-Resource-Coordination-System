@@ -1,0 +1,270 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+{% block title %}{{ 'Registered Events'|tr:preferred_language }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Ticket Modal Overlay ── */
+  .ticket-overlay {
+    position: fixed; inset: 0; z-index: 3000;
+    background: rgba(15, 23, 42, .72);
+    display: flex; align-items: center; justify-content: center;
+    padding: 1rem;
+  }
+  .ticket-overlay.hidden { display: none; }
+  .ticket-card {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 30px 80px rgba(0,0,0,.25);
+    width: min(680px, 100%);
+    overflow: hidden;
+    animation: ticketIn .3s ease;
+  }
+  @keyframes ticketIn {
+    from { transform: scale(.88) translateY(20px); opacity: 0; }
+    to   { transform: scale(1) translateY(0);      opacity: 1; }
+  }
+
+  /* ── Ticket Header ── */
+  .ticket-header {
+    background: #fff;
+    padding: 1rem 1.4rem .6rem;
+    display: flex; align-items: flex-start; justify-content: space-between;
+    border-bottom: none;
+  }
+  .ticket-status-row {
+    display: flex; align-items: center; gap: .6rem; margin-bottom: .25rem;
+  }
+  .ticket-status-badge {
+    background: #dbeafe; color: #1d4ed8;
+    font-size: .7rem; font-weight: 700; padding: .2rem .65rem;
+    border-radius: 999px; letter-spacing: .04em;
+  }
+  .ticket-id-text {
+    font-size: .78rem; color: #64748b; font-family: monospace;
+  }
+
+  /* ── Ticket Body ── */
+  .ticket-body {
+    display: grid;
+    grid-template-columns: 1fr 190px;
+    gap: 0;
+  }
+  .ticket-details {
+    padding: .5rem 1.4rem 1.2rem;
+    border-right: 2px dashed #e2e8f0;
+  }
+  .ticket-details h3 {
+    font-size: 1.55rem; font-weight: 700; color: #1e293b;
+    margin: 0 0 1rem;
+  }
+  .ticket-field { margin-bottom: .8rem; }
+  .ticket-field .lbl {
+    font-size: .66rem; font-weight: 700; letter-spacing: .08em;
+    color: #64748b; text-transform: uppercase; margin-bottom: .1rem;
+  }
+  .ticket-field .val {
+    font-size: .93rem; font-weight: 600; color: #1e293b;
+  }
+  .ticket-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: .15rem 1.4rem;
+  }
+  .ticket-divider {
+    border: none; border-top: 2px dashed #e2e8f0; margin: .9rem 0;
+  }
+  .ticket-issued {
+    font-size: .74rem; color: #64748b;
+    display: flex; align-items: center; gap: .35rem;
+  }
+
+  /* ── QR Column ── */
+  .ticket-qr-col {
+    padding: 1.2rem 1rem;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: .65rem; background: #f8fafc;
+  }
+  .ticket-qr-col img {
+    width: 140px; height: 140px;
+    border-radius: 10px; border: 1px solid #e2e8f0;
+  }
+  .ticket-uuid {
+    font-size: .67rem; color: #64748b; text-align: center; word-break: break-all;
+    font-family: monospace;
+  }
+  .ticket-uuid .uuid-label {
+    font-weight: 600; display: block; margin-bottom: .15rem; font-family: inherit;
+  }
+
+  /* ── Ticket Footer ── */
+  .ticket-footer {
+    padding: .9rem 1.4rem;
+    border-top: 2px dashed #e2e8f0;
+    display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+    background: #fff;
+  }
+
+  @media (max-width: 540px) {
+    .ticket-body { grid-template-columns: 1fr; }
+    .ticket-qr-col { border-right: none; border-top: 2px dashed #e2e8f0; }
+    .ticket-grid { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-list-check me-2 text-primary"></i>{{ 'Registered Events'|tr:preferred_language }}</h2>
+  <p class="text-muted">{{ 'Your registered events and QR codes are shown below.'|tr:preferred_language }}</p>
+</div>
+
+<div class="row g-4">
+  {% if category_sections %}
+    {% for section in category_sections %}
+      <div class="col-12">
+        <div class="card mb-3">
+          <div class="card-body">
+            <h4 class="mb-3">{{ section.category }}</h4>
+            <div class="row g-4">
+              {% for item in section.items %}
+                <div class="col-12 col-md-6">
+                  <div class="card h-100">
+                    <div class="card-body d-flex flex-column align-items-center text-center">
+                      <h5 class="card-title">{{ item.member.event.title }}</h5>
+                      <p class="text-muted mb-2">{{ item.member.event.start_time|date:'M d, Y H:i' }}</p>
+                      <div class="mb-3">
+                        {% if item.qr_data %}
+                          <img src="data:image/png;base64,{{ item.qr_data }}" alt="QR Code" class="img-fluid" style="max-width:180px;" />
+                        {% elif item.qr_url %}
+                          <img src="{{ item.qr_url }}" alt="QR Code" class="img-fluid" style="max-width:180px;" />
+                        {% else %}
+                          <div class="alert alert-warning mb-0">{{ 'QR code unavailable'|tr:preferred_language }}</div>
+                        {% endif %}
+                      </div>
+                      <p class="mb-1"><strong>{{ 'Registration Code:'|tr:preferred_language }}</strong></p>
+                      <p class="text-break">{{ item.member.registration_code }}</p>
+                      <div class="mt-auto d-flex flex-wrap justify-content-center gap-2">
+                        <a href="{% url 'event_registration_qr_download' item.member.pk %}" class="btn btn-primary btn-sm">
+                          <i class="bi bi-download me-1"></i>{{ 'Download QR'|tr:preferred_language }}
+                        </a>
+                        <button type="button"
+                                class="btn btn-outline-info btn-sm"
+                                onclick="openTicket('ticket-modal-{{ item.member.pk }}')">
+                          <i class="bi bi-ticket-perforated me-1"></i>{{ 'View Ticket'|tr:preferred_language }}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {# ── Ticket Modal for this registration ── #}
+                <div class="ticket-overlay hidden" id="ticket-modal-{{ item.member.pk }}"
+                     onclick="handleOverlayClick(event, 'ticket-modal-{{ item.member.pk }}')">
+                  <div class="ticket-card">
+                    {# Header #}
+                    <div class="ticket-header">
+                      <div>
+                        <div class="ticket-status-row">
+                          <span class="ticket-status-badge">{{ item.member.status|title }}</span>
+                          <span class="ticket-id-text">TKT-{{ item.member.pk }}-{{ item.member.registration_code|slice:":8"|upper }}</span>
+                        </div>
+                      </div>
+                      <button type="button" class="btn-close"
+                              onclick="closeTicket('ticket-modal-{{ item.member.pk }}')"
+                              aria-label="Close"></button>
+                    </div>
+
+                    {# Body #}
+                    <div class="ticket-body">
+                      <div class="ticket-details">
+                        <h3>{{ item.member.event.title }}</h3>
+                        <div class="ticket-grid">
+                          <div class="ticket-field">
+                            <div class="lbl">{{ 'Attendee Name'|tr:preferred_language }}</div>
+                            <div class="val">{{ item.member.user.get_full_name|default:item.member.user.username }}</div>
+                          </div>
+                          <div class="ticket-field">
+                            <div class="lbl">{{ 'Registration ID'|tr:preferred_language }}</div>
+                            <div class="val">REG-{{ item.member.pk }}-{{ item.member.event.pk }}</div>
+                          </div>
+                          <div class="ticket-field">
+                            <div class="lbl">{{ 'Email Address'|tr:preferred_language }}</div>
+                            <div class="val" style="font-size:.82rem;word-break:break-all;">{{ item.member.user.email|default:"—" }}</div>
+                          </div>
+                          <div class="ticket-field">
+                            <div class="lbl">{{ 'Role / Badge'|tr:preferred_language }}</div>
+                            <div class="val">{{ item.member.get_attendee_category_display }}</div>
+                          </div>
+                          <div class="ticket-field">
+                            <div class="lbl">{{ 'Event Venue'|tr:preferred_language }}</div>
+                            <div class="val">{{ item.member.event.venue|default:item.member.event.venue_name|default:item.member.event.location|default:"—" }}</div>
+                          </div>
+                          <div class="ticket-field">
+                            <div class="lbl">{{ 'Event Time'|tr:preferred_language }}</div>
+                            <div class="val" style="font-size:.82rem;">
+                              {% if item.member.event.start_time %}{{ item.member.event.start_time|date:"M. j, Y @ g:i a." }}{% else %}—{% endif %}
+                            </div>
+                          </div>
+                        </div>
+                        <hr class="ticket-divider">
+                        <div class="ticket-issued">
+                          <i class="bi bi-info-circle"></i>
+                          {{ 'Issued on:'|tr:preferred_language }} {{ item.member.joined_at|date:"F d, Y @ h:i A" }}
+                        </div>
+                      </div>
+
+                      {# QR column #}
+                      <div class="ticket-qr-col">
+                        {% if item.qr_data %}
+                          <img src="data:image/png;base64,{{ item.qr_data }}" alt="QR Code" />
+                        {% elif item.qr_url %}
+                          <img src="{{ item.qr_url }}" alt="QR Code" />
+                        {% endif %}
+                        <div class="ticket-uuid">
+                          <span class="uuid-label">{{ 'Ticket UUID'|tr:preferred_language }}</span>
+                          {{ item.member.registration_code|truncatechars:20 }}
+                        </div>
+                      </div>
+                    </div>
+
+                    {# Footer #}
+                    <div class="ticket-footer">
+                      <a href="{% url 'event_registration_pdf_download' item.member.pk %}" class="btn btn-dark btn-sm">
+                        <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ 'Download PDF'|tr:preferred_language }}
+                      </a>
+                      <button type="button"
+                              class="btn btn-outline-secondary btn-sm ms-auto"
+                              onclick="closeTicket('ticket-modal-{{ item.member.pk }}')">
+                        {{ 'Close'|tr:preferred_language }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="col-12">
+      <div class="alert alert-info">{{ 'You have not registered for any events yet.'|tr:preferred_language }}</div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function openTicket(id) {
+  var el = document.getElementById(id);
+  if (el) { el.classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
+}
+function closeTicket(id) {
+  var el = document.getElementById(id);
+  if (el) { el.classList.add('hidden'); document.body.style.overflow = ''; }
+}
+function handleOverlayClick(e, id) {
+  if (e.target === e.currentTarget) { closeTicket(id); }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+
+{% block title %}{{ 'Settings'|tr:preferred_language }} | {{ 'Event Registration Platform'|tr:preferred_language }}{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
+  <div>
+    <h2>{{ 'Settings'|tr:preferred_language }}</h2>
+    <p class="text-muted">{{ 'Manage theme, language, password, active sessions, and account options.'|tr:preferred_language }}</p>
+  </div>
+  <div class="w-100 w-md-auto" style="max-width:420px;">
+    <label class="form-label mb-1" for="settings-search">{{ 'Search settings'|tr:preferred_language }}</label>
+    <input id="settings-search" class="form-control form-control-sm" type="search" placeholder="{{ 'Search theme, language, password, sessions...'|tr:preferred_language }}" />
+  </div>
+</div>
+
+<div class="row g-4" id="settings-cards">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header-custom">
+        <h5><i class="bi bi-brightness-high-fill"></i> {{ 'Theme'|tr:preferred_language }}</h5>
+      </div>
+      <div class="form-section-body">
+        <p class="mb-3">{{ 'Switch between light and dark mode for the application interface.'|tr:preferred_language }}</p>
+        <div class="d-flex gap-2 flex-wrap">
+          <button id="theme-light" class="btn btn-outline-primary">{{ 'Light Mode'|tr:preferred_language }}</button>
+          <button id="theme-dark" class="btn btn-outline-primary">{{ 'Dark Mode'|tr:preferred_language }}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header-custom">
+        <h5><i class="bi bi-translate"></i> {{ 'Language'|tr:preferred_language }}</h5>
+      </div>
+      <div class="form-section-body">
+        <p class="mb-3">{{ 'Choose your preferred language.'|tr:preferred_language }}</p>
+        <form method="post" action="{% url 'settings' %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="change_language" />
+          <div class="mb-3">
+            <label class="form-label" for="language">{{ 'Language'|tr:preferred_language }}</label>
+            <select class="form-select" name="language" id="language">
+              <option value="en" {% if preferred_language == 'en' %}selected{% endif %}>{{ 'English'|tr:preferred_language }}</option>
+              <option value="hi" {% if preferred_language == 'hi' %}selected{% endif %}>हिन्दी</option>
+              <option value="bn" {% if preferred_language == 'bn' %}selected{% endif %}>বাংলা</option>
+              <option value="ta" {% if preferred_language == 'ta' %}selected{% endif %}>தமிழ்</option>
+              <option value="te" {% if preferred_language == 'te' %}selected{% endif %}>తెలుగు</option>
+              <option value="mr" {% if preferred_language == 'mr' %}selected{% endif %}>मराठी</option>
+              <option value="gu" {% if preferred_language == 'gu' %}selected{% endif %}>ગુજરાતી</option>
+              <option value="pa" {% if preferred_language == 'pa' %}selected{% endif %}>ਪੰਜਾਬੀ</option>
+              <option value="kn" {% if preferred_language == 'kn' %}selected{% endif %}>ಕನ್ನಡ</option>
+              <option value="ml" {% if preferred_language == 'ml' %}selected{% endif %}>മലയാളം</option>
+              <option value="ur" {% if preferred_language == 'ur' %}selected{% endif %}>اردو</option>
+              <option value="or" {% if preferred_language == 'or' %}selected{% endif %}>ଓଡ଼ିଆ</option>
+              <option value="as" {% if preferred_language == 'as' %}selected{% endif %}>অসমীয়া</option>
+              <option value="sa" {% if preferred_language == 'sa' %}selected{% endif %}>संस्कृत</option>
+              <option value="ne" {% if preferred_language == 'ne' %}selected{% endif %}>नेपाली</option>
+              <option value="en-gb" {% if preferred_language == 'en-gb' %}selected{% endif %}>{{ 'English (UK)'|tr:preferred_language }}</option>
+              <option value="es" {% if preferred_language == 'es' %}selected{% endif %}>Español</option>
+              <option value="fr" {% if preferred_language == 'fr' %}selected{% endif %}>Français</option>
+              <option value="ar" {% if preferred_language == 'ar' %}selected{% endif %}>العربية</option>
+              <option value="zh-hans" {% if preferred_language == 'zh-hans' %}selected{% endif %}>中文（简体）</option>
+              <option value="pt" {% if preferred_language == 'pt' %}selected{% endif %}>Português</option>
+              <option value="ru" {% if preferred_language == 'ru' %}selected{% endif %}>Русский</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-submit">{{ 'Update Language'|tr:preferred_language }}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header-custom">
+        <h5><i class="bi bi-key-fill"></i> {{ 'Password Reset'|tr:preferred_language }}</h5>
+      </div>
+      <div class="form-section-body">
+        <p class="mb-3">{{ 'Change your account password securely.'|tr:preferred_language }}</p>
+        <form method="post" action="{% url 'settings' %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="change_password" />
+          <div class="mb-3">
+            <button type="button" id="toggle-password-fields" class="btn btn-outline-primary">{{ 'Change Password'|tr:preferred_language }}</button>
+          </div>
+          <div id="password-fields" class="d-none">
+            <div class="mb-3">
+              <label class="form-label" for="current_password">{{ 'Current Password'|tr:preferred_language }}</label>
+              <input type="password" class="form-control" name="current_password" id="current_password" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="new_password">{{ 'New Password'|tr:preferred_language }}</label>
+              <input type="password" class="form-control" name="new_password" id="new_password" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="confirm_password">{{ 'Confirm New Password'|tr:preferred_language }}</label>
+              <input type="password" class="form-control" name="confirm_password" id="confirm_password" />
+            </div>
+            <button type="submit" class="btn btn-submit">{{ 'Reset Password'|tr:preferred_language }}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header-custom">
+        <h5><i class="bi bi-laptop-fill"></i> {{ 'Active Sessions'|tr:preferred_language }}</h5>
+      </div>
+      <div class="form-section-body">
+        <p class="mb-3">{{ 'Review active sessions and sign out from other devices.'|tr:preferred_language }}</p>
+        <ul class="list-group mb-3">
+          {% for session in active_sessions %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <strong>{{ session.key_short }}</strong>
+              {% if session.current %}<span class="badge bg-success ms-2">{{ 'Current'|tr:preferred_language }}</span>{% endif %}
+              <div class="text-muted small">{{ 'Expires'|tr:preferred_language }} {{ session.expire_date }}</div>
+            </div>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted">{{ 'No active sessions found.'|tr:preferred_language }}</li>
+          {% endfor %}
+        </ul>
+        <form method="post" action="{% url 'settings' %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="sign_out_other_sessions" />
+          <button type="submit" class="btn btn-outline-danger">{{ 'Sign out other sessions'|tr:preferred_language }}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="card border-danger">
+      <div class="card-header-custom">
+        <h5><i class="bi bi-trash-fill"></i> {{ 'Delete Account'|tr:preferred_language }}</h5>
+      </div>
+      <div class="form-section-body">
+        <p class="text-danger mb-3">{{ 'Permanently delete your account and all associated data. This action cannot be undone.'|tr:preferred_language }}</p>
+        <form method="post" action="{% url 'settings' %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete_account" />
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="confirm_delete" id="confirm_delete" value="yes" required />
+            <label class="form-check-label" for="confirm_delete">{{ 'Yes, I understand this will delete my account.'|tr:preferred_language }}</label>
+          </div>
+          <button type="submit" class="btn btn-del">{{ 'Delete Account'|tr:preferred_language }}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  function applyTheme(mode){
+    document.documentElement.dataset.theme = mode;
+    document.documentElement.setAttribute('data-theme', mode);
+    localStorage.setItem('theme', mode);
+  }
+
+  var lightBtn = document.getElementById('theme-light');
+  var darkBtn = document.getElementById('theme-dark');
+  if(lightBtn){
+    lightBtn.addEventListener('click', function(){
+      applyTheme('light');
+    });
+  }
+  if(darkBtn){
+    darkBtn.addEventListener('click', function(){
+      applyTheme('dark');
+    });
+  }
+
+  var searchInput = document.getElementById('settings-search');
+  var cardsContainer = document.getElementById('settings-cards');
+  if(searchInput && cardsContainer){
+    searchInput.addEventListener('input', function(){
+      var query = this.value.trim().toLowerCase();
+      var cards = cardsContainer.querySelectorAll('.card');
+      cards.forEach(function(card){
+        var text = card.textContent.toLowerCase();
+        card.style.display = text.indexOf(query) !== -1 ? '' : 'none';
+      });
+    });
+  }
+
+  var togglePasswordFields = document.getElementById('toggle-password-fields');
+  var passwordFields = document.getElementById('password-fields');
+  if (togglePasswordFields && passwordFields) {
+    togglePasswordFields.addEventListener('click', function () {
+      passwordFields.classList.toggle('d-none');
+      if (!passwordFields.classList.contains('d-none')) {
+        document.getElementById('current_password').focus();
+      }
+    });
+  }
+})();
+</script>
+{% endblock %}

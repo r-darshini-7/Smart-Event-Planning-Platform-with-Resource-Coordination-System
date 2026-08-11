@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+{% block title %}{{ 'Sign up'|tr:preferred_language }} — {{ 'Event Registration Platform'|tr:preferred_language }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  #sidebar, #top-navbar { display: none !important; }
+  .site-footer { display: none !important; }
+  #main-wrap { margin:0; padding:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#0f172a,#1e293b); }
+  .login-card{ background:#fff;border-radius:16px;padding:2.5rem;width:100%;max-width:520px;box-shadow:0 20px 60px rgba(0,0,0,.35);} 
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-card">
+  <div class="login-logo">
+    <div class="logo-icon"><i class="bi bi-calendar-event-fill"></i></div>
+    <h2>EventHub</h2>
+    <p>{{ 'Create your account'|tr:preferred_language }}</p>
+  </div>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="alert alert-danger border-0 py-2 px-3 mb-3" style="background:#fee2e2;color:#991b1b;border-radius:8px;font-size:.875rem;">{{ msg }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label fw-semibold">{{ 'Full name'|tr:preferred_language }}</label>
+      <input type="text" name="name" class="form-control" placeholder="{{ 'Your full name'|tr:preferred_language }}" required />
+    </div>
+    <div class="mb-3">
+      <label class="form-label fw-semibold">{{ 'Email'|tr:preferred_language }}</label>
+      <input type="email" name="email" class="form-control" placeholder="{{ 'you@example.com'|tr:preferred_language }}" required />
+    </div>
+    <div class="mb-3">
+      <label class="form-label fw-semibold">{{ 'Phone'|tr:preferred_language }}</label>
+      <input type="text" name="phone" class="form-control" placeholder="{{ 'Phone number (optional)'|tr:preferred_language }}" />
+    </div>
+    <div class="mb-3">
+      <label class="form-label fw-semibold">{{ 'Password'|tr:preferred_language }}</label>
+      <input type="password" name="password" class="form-control" placeholder="{{ 'Create password'|tr:preferred_language }}" required />
+    </div>
+    <div class="mb-4">
+      <label class="form-label fw-semibold">{{ 'Confirm password'|tr:preferred_language }}</label>
+      <input type="password" name="confirm_password" class="form-control" placeholder="{{ 'Repeat password'|tr:preferred_language }}" required />
+    </div>
+    <button type="submit" class="btn btn-primary w-100 fw-semibold py-2">{{ 'Sign up'|tr:preferred_language }}</button>
+  </form>
+
+  <hr class="login-divider">
+  <p class="text-center mb-0" style="font-size:.85rem;color:#64748b;">{{ 'Already have an account?'|tr:preferred_language }} <a href="{% url 'login' %}">{{ 'Sign in'|tr:preferred_language }}</a></p>
+</div>
+{% endblock %}

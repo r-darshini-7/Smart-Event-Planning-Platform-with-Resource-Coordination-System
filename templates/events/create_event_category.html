@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+{% block title %}{{ 'Create Event Category'|tr:preferred_language }} — {{ 'Event Registration Platform'|tr:preferred_language }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-folder-plus me-2 text-primary"></i>{{ 'Create Event Category'|tr:preferred_language }}</h2>
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">{{ 'Home'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'event_category' %}">{{ 'Category List'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item active">{{ 'Create Category'|tr:preferred_language }}</li>
+    </ol>
+  </nav>
+</div>
+
+<div class="form-section">
+  <div class="form-section-header">
+    <h5><i class="bi bi-folder-plus me-2"></i>{{ 'New Category Details'|tr:preferred_language }}</h5>
+  </div>
+  <div class="form-section-body">
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+
+      <div class="mb-4">
+        <label class="form-label" for="id_name">{{ 'Category Name'|tr:preferred_language }} <span class="text-danger">*</span></label>
+        {{ form.name }}
+        {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors }}</div>{% endif %}
+        <div class="form-text text-muted">{{ 'Type any category name. It will appear in the event category dropdown.'|tr:preferred_language }}</div>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label">{{ 'Category Code'|tr:preferred_language }} <span class="text-danger">*</span></label>
+        {{ form.code }}
+        {% if form.code.errors %}<div class="text-danger small mt-1">{{ form.code.errors }}</div>{% endif %}
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label">{{ 'Priority'|tr:preferred_language }}</label>
+        {{ form.priority }}
+        {% if form.priority.errors %}<div class="text-danger small mt-1">{{ form.priority.errors }}</div>{% endif %}
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label">{{ 'Status'|tr:preferred_language }}</label>
+        {{ form.status }}
+        {% if form.status.errors %}<div class="text-danger small mt-1">{{ form.status.errors }}</div>{% endif %}
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label">{{ 'Category Image'|tr:preferred_language }}</label>
+        {{ form.image }}
+        {% if form.image.errors %}<div class="text-danger small mt-1">{{ form.image.errors }}</div>{% endif %}
+        <div class="form-text text-muted">{{ 'Upload a JPG, PNG or WebP image for this category.'|tr:preferred_language }}</div>
+      </div>
+
+      <div class="d-flex gap-2 mt-3">
+        <button type="submit" class="btn-submit">
+          <i class="bi bi-save me-1"></i>{{ 'Save Category'|tr:preferred_language }}
+        </button>
+        <a href="{% url 'event_category' %}" class="btn-cancel">{{ 'Cancel'|tr:preferred_language }}</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

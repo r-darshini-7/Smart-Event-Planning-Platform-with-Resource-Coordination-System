@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+{% block title %}{{ 'Absence User List'|tr:preferred_language }} — {{ 'Event Registration Platform'|tr:preferred_language }}{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+  <h2><i class="bi bi-person-x-fill me-2 text-danger"></i>{{ 'Absence User List'|tr:preferred_language }}</h2>
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">{{ 'Home'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item active">{{ 'Absence User List'|tr:preferred_language }}</li>
+    </ol>
+  </nav>
+</div>
+
+<!-- Summary -->
+<div class="row g-3 mb-4">
+  <div class="col-auto">
+    <div class="card px-4 py-3 d-flex flex-row align-items-center gap-3">
+      <div style="font-size:2rem; color:#ef4444;"><i class="bi bi-person-x-fill"></i></div>
+      <div>
+        <div class="fw-bold fs-4">{{ absent_marks.count }}</div>
+        <div class="text-muted small">{{ 'Total Absences'|tr:preferred_language }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Registered Users List -->
+<div class="card mb-4">
+  <div class="card-header-custom">
+    <h5><i class="bi bi-people-fill me-1 text-primary"></i>{{ 'Users Registered List'|tr:preferred_language }}</h5>
+    <span class="badge bg-secondary">{{ registered_members.count }} {{ 'total'|tr:preferred_language }}</span>
+  </div>
+  <div class="p-0">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>{{ 'Name'|tr:preferred_language }}</th>
+          <th>{{ 'Event Name'|tr:preferred_language }}</th>
+          <th>{{ 'Status'|tr:preferred_language }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for member in registered_members %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div style="width:32px;height:32px;border-radius:50%;background:#dbeafe;
+                          display:flex;align-items:center;justify-content:center;
+                          color:#1e40af;font-weight:700;font-size:.85rem;">
+                {{ member.user.get_full_name|default:member.user.username|first|upper }}
+              </div>
+              {{ member.user.get_full_name|default:member.user.username }}
+            </div>
+          </td>
+          <td><a href="{% url 'event_detail' member.event.pk %}">{{ member.event.title }}</a></td>
+          <td>
+            {% if member.check_in_time %}
+              <span class="badge-status badge-approved"><i class="bi bi-check-circle-fill me-1"></i>{{ 'Present'|tr:preferred_language }}</span>
+            {% else %}
+              <span class="badge-status badge-absent"><i class="bi bi-x-circle-fill me-1"></i>{{ 'Absent'|tr:preferred_language }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+          <tr>
+            <td colspan="4" class="text-center text-muted py-4">{{ 'No registrations found.'|tr:preferred_language }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Absent Marks Table -->
+<div class="card">
+  <div class="card-header-custom">
+    <h5>{{ 'Users Marked as Absent'|tr:preferred_language }}</h5>
+    <a href="{% url 'create_user_mark' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-pencil me-1"></i>{{ 'Create Mark'|tr:preferred_language }}
+    </a>
+  </div>
+  <div class="p-0">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>{{ 'Username'|tr:preferred_language }}</th>
+          <th>{{ 'Email'|tr:preferred_language }}</th>
+          <th>{{ 'Event'|tr:preferred_language }}</th>
+          <th>{{ 'Event Status'|tr:preferred_language }}</th>
+          <th>{{ 'Marks'|tr:preferred_language }}</th>
+          <th>{{ 'Notes'|tr:preferred_language }}</th>
+          <th>{{ 'Date'|tr:preferred_language }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for mark in absent_marks %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div style="width:32px;height:32px;border-radius:50%;background:#fee2e2;
+                          display:flex;align-items:center;justify-content:center;
+                          color:#991b1b;font-weight:700;">
+                {{ mark.user.username|first|upper }}
+              </div>
+              {{ mark.user.username }}
+            </div>
+          </td>
+          <td>{{ mark.user.email|default:"—" }}</td>
+          <td><a href="{% url 'event_detail' mark.event.pk %}">{{ mark.event.title }}</a></td>
+          <td>
+            <span class="badge-status badge-{{ mark.event.status }}">
+              {{ mark.event.status|title }}
+            </span>
+          </td>
+          <td>{{ mark.marks }}</td>
+          <td>{{ mark.notes|default:"—"|truncatechars:40 }}</td>
+          <td>{{ mark.created_at|date:"d M Y" }}</td>
+        </tr>
+        {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-4">
+              <i class="bi bi-check-circle text-success me-1"></i>
+              {{ 'No Absent Users Found'|tr:preferred_language }} — {{ 'Great Attendance'|tr:preferred_language }}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

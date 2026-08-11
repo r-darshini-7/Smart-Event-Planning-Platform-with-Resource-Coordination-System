@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}Venues — Event Management{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-building me-2 text-primary"></i>Venue Repository</h2>
+  <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item active">Venues</li></ol></nav>
+</div>
+<div class="card">
+  <div class="card-header-custom">
+    <h5>All Venues</h5>
+    <a href="{% url 'venue_create' %}" class="btn btn-success btn-sm"><i class="bi bi-plus-circle me-1"></i>Add Venue</a>
+  </div>
+  <div class="p-0">
+    <table class="table-custom">
+      <thead><tr><th>#</th><th>Name</th><th>City</th><th>Capacity</th><th>Rate/hr</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for v in venues %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>{{ v.name }}</td>
+          <td>{{ v.city|default:"—" }}</td>
+          <td>{{ v.capacity }}</td>
+          <td>₹{{ v.hourly_rate }}</td>
+          <td><span class="badge-status badge-{{ v.status }}">{{ v.get_status_display }}</span></td>
+          <td>
+            <a href="{% url 'venue_edit' v.pk %}" class="btn-edit"><i class="bi bi-pencil"></i></a>
+            <a href="{% url 'venue_delete' v.pk %}" class="btn-del"><i class="bi bi-trash"></i></a>
+          </td>
+        </tr>
+        {% empty %}<tr><td colspan="7" class="text-center text-muted py-3">No venues yet.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+{% block title %}{{ 'Join Event List'|tr:preferred_language }} — {{ 'Event Registration Platform'|tr:preferred_language }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-people-fill me-2 text-primary"></i>{{ 'Join Event List'|tr:preferred_language }}</h2>
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">{{ 'Home'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item active">{{ 'Join Event List'|tr:preferred_language }}</li>
+    </ol>
+  </nav>
+</div>
+
+<div class="card">
+  <div class="card-header-custom">
+    <h5>{{ 'All Event Registrations'|tr:preferred_language }}</h5>
+    {% if user.is_staff %}
+    <a href="{% url 'add_event_member' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-person-plus me-1"></i>{{ 'Add Member'|tr:preferred_language }}
+    </a>
+    {% endif %}
+  </div>
+  <div class="p-0">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th>#</th><th>{{ 'Event'|tr:preferred_language }}</th><th>{{ 'Username'|tr:preferred_language }}</th><th>{{ 'Email'|tr:preferred_language }}</th>
+          <th>{{ 'Status'|tr:preferred_language }}</th><th>{{ 'Joined'|tr:preferred_language }}</th><th>{{ 'Actions'|tr:preferred_language }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in members %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td><a href="{% url 'event_detail' m.event.pk %}">{{ m.event.title }}</a></td>
+          <td>{{ m.user.username }}</td>
+          <td>{{ m.user.email|default:"—" }}</td>
+          <td><span class="badge-status badge-{{ m.status }}">{{ m.status|title }}</span></td>
+          <td>{{ m.joined_at|date:"d M Y" }}</td>
+          <td>
+            {% if user.is_staff %}
+            <a href="{% url 'update_event_status' m.pk %}" class="btn-edit">
+              <i class="bi bi-arrow-repeat"></i>Status
+            </a>
+            <a href="{% url 'remove_event_member' m.pk %}" class="btn-del">
+              <i class="bi bi-trash"></i>
+            </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+          <tr><td colspan="7" class="text-center text-muted py-4">{{ 'No Registrations Found'|tr:preferred_language }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

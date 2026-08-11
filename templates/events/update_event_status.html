@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+{% block title %}{{ 'Update Member Status'|tr:preferred_language }} — {{ 'Event Registration Platform'|tr:preferred_language }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-arrow-repeat me-2 text-warning"></i>{{ 'Update Member Status'|tr:preferred_language }}</h2>
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">{{ 'Home'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'join_event_list' %}">{{ 'Join Event List'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item active">{{ 'Update Status'|tr:preferred_language }}</li>
+    </ol>
+  </nav>
+</div>
+
+<div class="form-section">
+  <div class="form-section-header">
+    <h5><i class="bi bi-arrow-repeat me-2"></i>{{ 'Update Status'|tr:preferred_language }}</h5>
+  </div>
+  <div class="form-section-body">
+    <div class="mb-3">
+      <p class="mb-1 text-muted small">{{ 'User'|tr:preferred_language }}</p>
+      <p class="fw-semibold">{{ member.user.username }}</p>
+    </div>
+    <div class="mb-3">
+      <p class="mb-1 text-muted small">{{ 'Event'|tr:preferred_language }}</p>
+      <p class="fw-semibold">{{ member.event.title }}</p>
+    </div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="mb-4">
+        <label class="form-label">{{ 'New Status'|tr:preferred_language }}</label>
+        {{ form.status }}
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn-submit"><i class="bi bi-save me-1"></i>{{ 'Update'|tr:preferred_language }}</button>
+        <a href="{% url 'join_event_list' %}" class="btn-cancel">{{ 'Cancel'|tr:preferred_language }}</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

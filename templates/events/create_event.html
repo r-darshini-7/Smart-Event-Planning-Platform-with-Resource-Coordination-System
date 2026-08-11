@@ -1,0 +1,312 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+{% block title %}{% if event %}{{ 'Edit Event'|tr:preferred_language }}{% else %}{{ 'Create Event'|tr:preferred_language }}{% endif %} — {{ 'Event Registration Platform'|tr:preferred_language }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-calendar-plus me-2 text-primary"></i>{% if event %}{{ 'Edit Event'|tr:preferred_language }}{% else %}{{ 'Create New Event'|tr:preferred_language }}{% endif %}</h2>
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">{{ 'Home'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'event_list' %}">{{ 'Event List'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item active">{% if event %}{{ 'Edit Event'|tr:preferred_language }}{% else %}{{ 'Create Event'|tr:preferred_language }}{% endif %}</li>
+    </ol>
+  </nav>
+</div>
+
+<form method="post" enctype="multipart/form-data" novalidate>
+{% csrf_token %}
+  {% if event %}
+    <input type="hidden" name="edit" value="{{ event.pk }}" />
+  {% endif %}
+
+<!-- ── Section 1: Core Info ── -->
+<div class="form-section mb-4">
+  <div class="form-section-header">
+    <h5><i class="bi bi-info-circle me-2"></i>{{ 'Core Information'|tr:preferred_language }}</h5>
+  </div>
+  <div class="form-section-body">
+
+    <div class="mb-4">
+      <label class="form-label">{{ 'UID'|tr:preferred_language }} <span class="text-danger">*</span></label>
+      {{ form.uid }}
+      {% if form.uid.errors %}<div class="text-danger small mt-1">{{ form.uid.errors }}</div>{% endif %}
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label">{{ 'Event Title'|tr:preferred_language }} <span class="text-danger">*</span></label>
+      {{ form.title }}
+      {% if form.title.errors %}<div class="text-danger small mt-1">{{ form.title.errors }}</div>{% endif %}
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label">{{ 'Category'|tr:preferred_language }}</label>
+      {{ form.category_type }}
+      {% if form.category_type.errors %}<div class="text-danger small mt-1">{{ form.category_type.errors }}</div>{% endif %}
+    </div>
+
+    <div class="mb-4" id="custom-category-wrap" style="display:none;">
+      <label class="form-label">{{ 'Other Category'|tr:preferred_language }}</label>
+      {{ form.custom_category }}
+      {% if form.custom_category.errors %}<div class="text-danger small mt-1">{{ form.custom_category.errors }}</div>{% endif %}
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label">{{ 'Description'|tr:preferred_language }}</label>
+      {{ form.description }}
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label">{{ 'Event Image'|tr:preferred_language }}</label>
+      {{ form.image }}
+      {% if form.image.errors %}<div class="text-danger small mt-1">{{ form.image.errors }}</div>{% endif %}
+    </div>
+
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var categoryType = document.getElementById('id_category_type');
+    var customWrap = document.getElementById('custom-category-wrap');
+    if (!categoryType || !customWrap) return;
+    function toggleCustom() {
+      customWrap.style.display = categoryType.value === 'others' ? 'block' : 'none';
+    }
+    categoryType.addEventListener('change', toggleCustom);
+    toggleCustom();
+  });
+</script>
+
+<!-- ── Section 2: Session & Speaker ── -->
+<div class="form-section mb-4">
+  <div class="form-section-header">
+    <h5><i class="bi bi-mic-fill me-2"></i>{{ 'Session & Speaker'|tr:preferred_language }}</h5>
+  </div>
+  <div class="form-section-body">
+
+    <div class="mb-4">
+      <label class="form-label">{{ 'Session Name'|tr:preferred_language }}</label>
+      {{ form.session_name }}
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label">{{ 'Speaker Name'|tr:preferred_language }}</label>
+      {{ form.speaker_name }}
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Section 3: Schedule ── -->
+<div class="form-section mb-4">
+  <div class="form-section-header">
+    <h5><i class="bi bi-clock me-2"></i>{{ 'Schedule'|tr:preferred_language }}</h5>
+  </div>
+  <div class="form-section-body">
+
+    <div class="mb-4">
+      <label class="form-label">{{ 'Start Time'|tr:preferred_language }} <span class="text-danger">*</span></label>
+      {{ form.start_time }}
+      {% if form.start_time.errors %}<div class="text-danger small mt-1">{{ form.start_time.errors }}</div>{% endif %}
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label">{{ 'End Time'|tr:preferred_language }} <span class="text-danger">*</span></label>
+      {{ form.end_time }}
+      {% if form.end_time.errors %}<div class="text-danger small mt-1">{{ form.end_time.errors }}</div>{% endif %}
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Section 4: Venue ── -->
+<div class="form-section mb-4">
+  <div class="form-section-header">
+    <h5><i class="bi bi-geo-alt-fill me-2"></i>{{ 'Venue & Location'|tr:preferred_language }}</h5>
+  </div>
+  <div class="form-section-body">
+
+    <div class="mb-4">
+      <label class="form-label">{{ 'Venue Name'|tr:preferred_language }}</label>
+      {{ form.venue_name }}
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label">{{ 'Full Address'|tr:preferred_language }}</label>
+      {{ form.location }}
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label">{{ 'Event Location'|tr:preferred_language }}</label>
+      {{ form.map_latitude }}
+      {{ form.map_longitude }}
+      <div id="event-map" class="border rounded" style="min-height:320px; background:#f8fafc;"></div>
+      <div class="form-text text-muted">{{ 'Click the map to drop a pin and use the zoom controls to adjust the view.'|tr:preferred_language }}</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var latField = document.getElementById('id_map_latitude');
+    var lngField = document.getElementById('id_map_longitude');
+    var mapEl = document.getElementById('event-map');
+    if (!mapEl || typeof L === 'undefined') return;
+
+    var initialLat = parseFloat(latField.value) || 20.5937;
+    var initialLng = parseFloat(lngField.value) || 78.9629;
+    var map = L.map(mapEl).setView([initialLat, initialLng], latField.value && lngField.value ? 13 : 5);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(map);
+
+    var marker;
+    function setMarker(lat, lng) {
+      if (marker) {
+        marker.setLatLng([lat, lng]);
+      } else {
+        marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+        marker.on('dragend', function(event) {
+          var pos = event.target.getLatLng();
+          updateCoordinates(pos.lat, pos.lng);
+        });
+      }
+      updateCoordinates(lat, lng);
+    }
+
+    function updateCoordinates(lat, lng) {
+      latField.value = lat.toFixed(6);
+      lngField.value = lng.toFixed(6);
+    }
+
+    map.on('click', function(event) {
+      setMarker(event.latlng.lat, event.latlng.lng);
+    });
+
+    if (latField.value && lngField.value) {
+      setMarker(initialLat, initialLng);
+      map.setView([initialLat, initialLng], 13);
+    }
+  });
+</script>
+
+<!-- ── Section 5: Capacity & Classification ── -->
+<div class="form-section mb-4">
+  <div class="form-section-header">
+    <h5><i class="bi bi-gear-fill me-2"></i>{{ 'Capacity, Points & Classification'|tr:preferred_language }}</h5>
+  </div>
+  <div class="form-section-body">
+
+    <div class="mb-4">
+      <label class="form-label">{{ 'Price'|tr:preferred_language }} (&#8377;)</label>
+      {{ form.price }}
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label">{{ 'Payment QR Code'|tr:preferred_language }}</label>
+      {{ form.qr_code_image }}
+      {% if form.qr_code_image.errors %}<div class="text-danger small mt-1">{{ form.qr_code_image.errors }}</div>{% endif %}
+      {% if event and event.qr_code_image %}
+        <div class="mt-2">
+          <img src="{{ event.qr_code_image.url }}" alt="Current payment QR code" style="max-width:180px; max-height:180px; object-fit:contain; border-radius:8px;" />
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label">{{ 'Points Awarded'|tr:preferred_language }}</label>
+      {{ form.points }}
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label">{{ 'Max Attendance'|tr:preferred_language }}</label>
+      {{ form.max_attendance }}
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label">{{ 'Job Category'|tr:preferred_language }}</label>
+      {{ form.job_category }}
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label">{{ 'Status'|tr:preferred_language }}</label>
+      {{ form.status }}
+    </div>
+
+  </div>
+</div>
+
+{% if form.non_field_errors %}
+  <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+{% endif %}
+
+<div class="d-flex gap-2 mb-4">
+  <button type="submit" class="btn-submit">
+    <i class="bi bi-save me-1"></i>{% if event %}{{ 'Update Event'|tr:preferred_language }}{% else %}{{ 'Create Event'|tr:preferred_language }}{% endif %}
+  </button>
+  <a href="{% url 'event_list' %}" class="btn-cancel">{{ 'Cancel'|tr:preferred_language }}</a>
+</div>
+
+  <!-- Ensure required classification fields are submitted even when not shown -->
+  <input type="hidden" id="id_event_type" name="event_type" value="{% if event %}{{ event.event_type }}{% else %}others{% endif %}" />
+  <input type="hidden" id="id_subcategory" name="subcategory" value="{% if event %}{{ event.subcategory }}{% else %}others{% endif %}" />
+
+  <script>
+    // map visible category labels to event_type codes
+    (function(){
+      var map = {
+        'Tech Fest': 'tech_fest',
+        'Cultural': 'cultural',
+        'Hackathons': 'hackathons',
+        'Competitions': 'competitions',
+        'Seminars': 'seminars',
+        '': 'others',
+      };
+      var categoryType = document.getElementById('id_category_type');
+      var eventType = document.getElementById('id_event_type');
+      var subcat = document.getElementById('id_subcategory');
+      function sync(){
+        if(!categoryType || !eventType) return;
+        var val = categoryType.value || '';
+        if(val === 'others'){
+          // preserve the existing event_type/subcategory when editing a custom category.
+          if(!eventType.value) eventType.value = 'others';
+          if(subcat && !subcat.value) subcat.value = 'others';
+          return;
+        }
+        var code = map[val] || 'others';
+        eventType.value = code;
+        if(subcat && !subcat.value) {
+          subcat.value = 'others';
+        }
+      }
+      if(categoryType){
+        categoryType.addEventListener('change', sync);
+        // initialize
+        sync();
+      }
+    })();
+  </script>
+
+</form>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    ['id_price','id_points','id_max_attendance'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(!el) return;
+      // store the initial value so we can restore it on blur if left empty
+      el.dataset.defaultValue = el.value;
+      el.addEventListener('focus', function(){
+        if(el.value === el.dataset.defaultValue) el.value = '';
+      });
+      el.addEventListener('blur', function(){
+        if(el.value === '') el.value = el.dataset.defaultValue;
+      });
+    });
+  });
+</script>
+{% endblock %}

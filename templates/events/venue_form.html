@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} — Event Management{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-building me-2 text-primary"></i>{{ title }}</h2>
+  <nav aria-label="breadcrumb"><ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'venue_list' %}">Venues</a></li>
+    <li class="breadcrumb-item active">{{ title }}</li>
+  </ol></nav>
+</div>
+<div class="card">
+  <div class="card-header-custom"><h5>{{ title }}</h5></div>
+  <div class="card-body">
+    <form method="post">{% csrf_token %}
+      {% for field in form %}
+      <div class="mb-3">
+        <label class="form-label">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+      </div>
+      {% endfor %}
+      <button type="submit" class="btn-submit">Save Venue</button>
+      <a href="{% url 'venue_list' %}" class="btn-cancel ms-2">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

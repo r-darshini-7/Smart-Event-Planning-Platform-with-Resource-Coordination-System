@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Approval Requests{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-clipboard-check me-2 text-primary"></i>Approval Requests</h2>
+</div>
+<div class="card">
+  <div class="card-header-custom">
+    <h5>All Requests</h5>
+    <a href="{% url 'approval_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle me-1"></i>New Request</a>
+  </div>
+  <div class="p-0">
+    <table class="table-custom">
+      <thead><tr><th>#</th><th>Type</th><th>Title</th><th>Requested By</th><th>Event</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for a in approvals %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>{{ a.get_request_type_display }}</td>
+          <td>{{ a.title }}</td>
+          <td>{{ a.requested_by.username|default:"—" }}</td>
+          <td>{{ a.event.title|default:"—" }}</td>
+          <td><span class="badge-status badge-{{ a.status }}">{{ a.get_status_display }}</span></td>
+          <td>{{ a.created_at|date:"d M Y" }}</td>
+          <td>
+            {% if user.is_staff and a.status == 'pending' %}
+            <form method="post" action="{% url 'approval_review' a.pk %}">{% csrf_token %}
+              <input type="hidden" name="action" value="approve">
+              <textarea name="reviewer_notes" class="form-control form-control-sm mb-1" rows="1" placeholder="Notes…"></textarea>
+              <button class="btn btn-sm btn-success">Approve</button>
+            </form>
+            <form method="post" action="{% url 'approval_review' a.pk %}" class="mt-1">{% csrf_token %}
+              <input type="hidden" name="action" value="reject">
+              <button class="btn btn-sm btn-warning">Reject</button>
+            </form>
+            {% else %}
+            {{ a.reviewer_notes|default:"—"|truncatechars:40 }}
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}<tr><td colspan="8" class="text-center text-muted py-3">No requests.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

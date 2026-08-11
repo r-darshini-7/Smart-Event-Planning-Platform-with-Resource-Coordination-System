@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Vendor Assignments{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-person-workspace me-2 text-primary"></i>Vendor Assignments</h2>
+</div>
+<div class="card">
+  <div class="card-header-custom">
+    <h5>Assignments</h5>
+    <a href="{% url 'vendor_assignment_create' %}" class="btn btn-success btn-sm"><i class="bi bi-plus-circle me-1"></i>Assign Vendor</a>
+  </div>
+  <div class="p-0">
+    <table class="table-custom">
+      <thead><tr><th>#</th><th>Vendor</th><th>Event</th><th>Amount</th><th>Deadline</th><th>Quality</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for a in assignments %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>{{ a.vendor.name }}</td>
+          <td>{{ a.event.title }}</td>
+          <td>₹{{ a.agreed_amount }}</td>
+          <td>{{ a.delivery_deadline|date:"d M Y"|default:"—" }}</td>
+          <td>{{ a.quality_score|default:"—" }}/10</td>
+          <td><span class="badge-status badge-{{ a.status }}">{{ a.get_status_display }}</span></td>
+          <td>
+            <form method="post" action="{% url 'vendor_assignment_update_status' a.pk %}" class="d-inline">
+              {% csrf_token %}
+              <select name="status" class="form-select form-select-sm d-inline w-auto">
+                {% for val, lbl in a.STATUS_CHOICES %}<option value="{{ val }}" {% if a.status == val %}selected{% endif %}>{{ lbl }}</option>{% endfor %}
+              </select>
+              <input type="number" name="quality_score" placeholder="Score 0-10" min="0" max="10" step="0.1" class="form-control form-control-sm d-inline w-auto">
+              <button type="submit" class="btn btn-sm btn-primary">Update</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}<tr><td colspan="8" class="text-center text-muted py-3">No assignments yet.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

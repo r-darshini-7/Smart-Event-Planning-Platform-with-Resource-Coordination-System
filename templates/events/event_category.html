@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+{% block title %}{{ 'Category List'|tr:preferred_language }} — {{ 'Event Registration Platform'|tr:preferred_language }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-folder2-open me-2 text-primary"></i>{{ 'Event Category List'|tr:preferred_language }}</h2>
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">{{ 'Home'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item active">{{ 'Category List'|tr:preferred_language }}</li>
+    </ol>
+  </nav>
+</div>
+
+<div class="card">
+  <div class="card-header-custom">
+    <h5>{{ 'All Categories'|tr:preferred_language }}</h5>
+    {% if user.is_staff %}
+    <a href="{% url 'create_event_category' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-folder-plus me-1"></i>{{ 'Create New Category'|tr:preferred_language }}
+    </a>
+    {% endif %}
+  </div>
+  <div class="p-0">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th>#</th><th>{{ 'Name'|tr:preferred_language }}</th><th>{{ 'Code'|tr:preferred_language }}</th><th>{{ 'Image'|tr:preferred_language }}</th>
+          <th>{{ 'Priority'|tr:preferred_language }}</th><th>{{ 'Status'|tr:preferred_language }}</th><th>{{ 'Actions'|tr:preferred_language }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in categories %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td class="fw-semibold">{{ c.name }}</td>
+          <td><code>{{ c.code }}</code></td>
+          <td>
+            {% if c.image %}
+              <img src="{{ c.image.url }}" height="42" style="border-radius:4px;" alt="{{ c.name }}">
+            {% else %}—{% endif %}
+          </td>
+          <td>{{ c.priority }}</td>
+          <td><span class="badge-status badge-{{ c.status }}">{{ c.status|title }}</span></td>
+          <td>
+            {% if user.is_staff %}
+            <a href="{% url 'edit_event_category' c.pk %}" class="btn-edit">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <a href="{% url 'event_category_delete' c.pk %}" class="btn-del">
+              <i class="bi bi-trash"></i>
+            </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+          <tr><td colspan="7" class="text-center text-muted py-4">{{ 'No Categories Found'|tr:preferred_language }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

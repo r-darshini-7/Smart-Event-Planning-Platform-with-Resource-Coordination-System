@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+{% block title %}{{ 'Remove Member'|tr:preferred_language }} — {{ 'Event Registration Platform'|tr:preferred_language }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-person-x-fill me-2 text-danger"></i>{{ 'Remove Event Member'|tr:preferred_language }}</h2>
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">{{ 'Home'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'join_event_list' %}">{{ 'Join Event List'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item active">{{ 'Remove Member'|tr:preferred_language }}</li>
+    </ol>
+  </nav>
+</div>
+
+<div class="card">
+  <div class="card-body p-4 text-center">
+    <div class="mb-3" style="font-size:3.5rem; color:#ef4444;">
+      <i class="bi bi-person-x-fill"></i>
+    </div>
+    <h4 class="fw-bold mb-1">{{ 'Remove Member?'|tr:preferred_language }}</h4>
+    <p class="text-muted mb-1">{{ 'You are about to remove:'|tr:preferred_language }}</p>
+    <p class="fw-semibold fs-5 mb-1">{{ member.user.username }}</p>
+    <p class="text-muted mb-4">{{ 'from'|tr:preferred_language }} <strong>{{ member.event.title }}</strong></p>
+    <form method="post" class="d-flex justify-content-center gap-3">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger px-4 fw-semibold">
+        <i class="bi bi-person-x me-1"></i>{{ 'Yes, Remove'|tr:preferred_language }}
+      </button>
+      <a href="{% url 'join_event_list' %}" class="btn btn-secondary px-4">{{ 'Cancel'|tr:preferred_language }}</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

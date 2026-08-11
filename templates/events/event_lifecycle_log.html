@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Lifecycle Log — {{ event.title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-activity me-2 text-primary"></i>Lifecycle Log</h2>
+  <nav aria-label="breadcrumb"><ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'event_detail' event.pk %}">{{ event.title }}</a></li>
+    <li class="breadcrumb-item active">Lifecycle</li>
+  </ol></nav>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header-custom"><h5>Advance Status</h5></div>
+  <div class="card-body">
+    <form method="post" action="{% url 'event_advance_status' event.pk %}" class="d-flex gap-2 align-items-start">{% csrf_token %}
+      <select name="status" class="form-select w-auto">
+        {% for val, lbl in event.STATUS_CHOICES %}<option value="{{ val }}" {% if event.status == val %}selected{% endif %}>{{ lbl }}</option>{% endfor %}
+      </select>
+      <textarea name="notes" class="form-control" rows="1" placeholder="Notes (optional)…" style="max-width:300px;"></textarea>
+      <button type="submit" class="btn btn-primary">Apply</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header-custom"><h5>History</h5></div>
+  <div class="p-0">
+    <table class="table-custom">
+      <thead><tr><th>#</th><th>From</th><th>To</th><th>Changed By</th><th>Notes</th><th>Time</th></tr></thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td><span class="badge-status badge-{{ log.from_status }}">{{ log.from_status|default:"—" }}</span></td>
+          <td><span class="badge-status badge-{{ log.to_status }}">{{ log.to_status }}</span></td>
+          <td>{{ log.changed_by.username|default:"—" }}</td>
+          <td>{{ log.notes|default:"—" }}</td>
+          <td>{{ log.changed_at|date:"d M Y, H:i" }}</td>
+        </tr>
+        {% empty %}<tr><td colspan="6" class="text-center text-muted py-3">No history.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-header"><h2>{{ title }}</h2></div>
+<div class="card"><div class="card-body">
+  <form method="post">{% csrf_token %}
+    {% for field in form %}
+    <div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>
+    {% endfor %}
+    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+    <button type="submit" class="btn-submit">Save</button>
+    <a href="{% url 'venue_booking_list' %}" class="btn-cancel ms-2">Cancel</a>
+  </form>
+</div></div>
+{% endblock %}

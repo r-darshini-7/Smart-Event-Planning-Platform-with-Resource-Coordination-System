@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+{% block title %}{{ 'Certificates'|tr:preferred_language }} — {{ 'Event Registration Platform'|tr:preferred_language }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .cert-card{
+    background:#fff;
+    border:1px solid #e2e8f0;
+    border-radius:14px;
+    box-shadow:0 2px 12px rgba(0,0,0,.07);
+    overflow:hidden;
+    transition:box-shadow .18s,transform .18s;
+  }
+  .cert-card:hover{
+    box-shadow:0 8px 28px rgba(0,0,0,.13);
+    transform:translateY(-2px);
+  }
+  .cert-card-header{
+    background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);
+    padding:1.1rem 1.4rem .9rem;
+    position:relative;
+  }
+  .cert-card-header h5{
+    color:#fff;margin:0;font-size:1rem;font-weight:700;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    padding-right:2.5rem;
+  }
+  .cert-badge{
+    position:absolute;top:1rem;right:1rem;
+    background:rgba(23,162,184,.22);
+    color:#17a2b8;
+    border:1px solid rgba(23,162,184,.4);
+    border-radius:20px;
+    padding:.2rem .65rem;
+    font-size:.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  }
+  .cert-card-body{
+    padding:1.1rem 1.4rem 1.4rem;
+  }
+  .cert-meta{
+    font-size:.82rem;color:#64748b;
+    display:flex;flex-direction:column;gap:.35rem;
+    margin-bottom:1rem;
+  }
+  .cert-meta span i{ width:1rem; }
+  .cert-actions{
+    display:flex;gap:.6rem;flex-wrap:wrap;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-award me-2 text-primary"></i>{{ 'Certificates'|tr:preferred_language }}</h2>
+  <p class="text-muted">{{ 'Download your participation certificates for registered events.'|tr:preferred_language }}</p>
+</div>
+
+{% if members %}
+<div class="row g-4">
+  {% for member in members %}
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="cert-card">
+        <div class="cert-card-header">
+          <h5>{{ member.event.title }}</h5>
+          <span class="cert-badge">{{ member.get_status_display }}</span>
+        </div>
+        <div class="cert-card-body">
+          <div class="cert-meta">
+            {% if member.event.start_time %}
+              <span><i class="bi bi-calendar3"></i> {{ member.event.start_time|date:"M d, Y" }}</span>
+            {% endif %}
+            {% if member.event.venue or member.event.location %}
+              <span><i class="bi bi-geo-alt"></i> {{ member.event.venue|default:member.event.location }}</span>
+            {% endif %}
+            {% if member.event.category %}
+              <span><i class="bi bi-tag"></i> {{ member.event.category.name }}</span>
+            {% endif %}
+            <span><i class="bi bi-person-badge"></i> {{ member.get_attendee_category_display }}</span>
+          </div>
+          <div class="cert-actions">
+            <a href="{% url 'certificate_download' member.pk %}" class="btn btn-primary btn-sm">
+              <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ 'Download Certificate'|tr:preferred_language }}
+            </a>
+            <a href="{% url 'event_detail' member.event.pk %}" class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-info-circle me-1"></i>{{ 'View Event'|tr:preferred_language }}
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info d-flex align-items-center gap-2">
+  <i class="bi bi-award" style="font-size:1.4rem;"></i>
+  <div>
+    <strong>{{ 'No certificates yet.'|tr:preferred_language }}</strong>
+    {{ 'Certificates are available once your event registration is approved.'|tr:preferred_language }}
+    <a href="{% url 'my_activity' %}" class="ms-1">{{ 'View Registered Events'|tr:preferred_language }}</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+{% block title %}{{ 'Remove Wish'|tr:preferred_language }} — {{ 'Event Registration Platform'|tr:preferred_language }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-heart-break-fill me-2 text-danger"></i>{{ 'Remove from Wishlist'|tr:preferred_language }}</h2>
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">{{ 'Home'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'event_user_wish_list' %}">{{ 'Wish List'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item active">{{ 'Remove'|tr:preferred_language }}</li>
+    </ol>
+  </nav>
+</div>
+
+<div class="card" style="max-width:500px;">
+  <div class="card-body p-4 text-center">
+    <div class="mb-3" style="font-size:3.5rem; color:#ef4444;">
+      <i class="bi bi-heart-break-fill"></i>
+    </div>
+    <h4 class="fw-bold mb-1">{{ 'Remove from Wishlist?'|tr:preferred_language }}</h4>
+    <p class="text-muted mb-1">{{ 'Remove wish for:'|tr:preferred_language }}</p>
+    <p class="fw-semibold fs-5 mb-1">{{ wish.user.username }}</p>
+    <p class="text-muted mb-4">{{ 'Event'|tr:preferred_language }}: <strong>{{ wish.event.title }}</strong></p>
+    <form method="post" class="d-flex justify-content-center gap-3">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger px-4 fw-semibold">
+        <i class="bi bi-heart-break me-1"></i>{{ 'Yes, Remove'|tr:preferred_language }}
+      </button>
+      <a href="{% url 'event_user_wish_list' %}" class="btn btn-secondary px-4">{{ 'Cancel'|tr:preferred_language }}</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

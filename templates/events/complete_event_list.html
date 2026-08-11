@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+{% block title %}{{ 'Complete Event List'|tr:preferred_language }} — {{ 'Event Registration Platform'|tr:preferred_language }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-check2-circle me-2 text-success"></i>{{ 'Complete Event List'|tr:preferred_language }}</h2>
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">{{ 'Home'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item active">{{ 'Complete Event List'|tr:preferred_language }}</li>
+    </ol>
+  </nav>
+</div>
+
+<div class="card">
+  <div class="card-header-custom">
+    <h5>{{ 'Completed Events'|tr:preferred_language }}</h5>
+    <span class="badge bg-success">{{ events.count }} {{ 'Completed'|tr:preferred_language }}</span>
+  </div>
+  <div class="p-0">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th>#</th><th>{{ 'Title'|tr:preferred_language }}</th><th>{{ 'Category'|tr:preferred_language }}</th>
+          <th>{{ 'Start'|tr:preferred_language }}</th><th>{{ 'End'|tr:preferred_language }}</th><th>{{ 'Venue'|tr:preferred_language }}</th><th>{{ 'Actions'|tr:preferred_language }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in events %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td class="fw-semibold">{{ e.title }}</td>
+          <td>{{ e.category.name|default:"—" }}</td>
+          <td>{{ e.start_time|date:"d M Y H:i" }}</td>
+          <td>{{ e.end_time|date:"d M Y H:i" }}</td>
+          <td>{{ e.venue_name|default:"—" }}</td>
+          <td>
+            <a href="{% url 'complete_event_user_list' e.pk %}" class="btn-view">
+              <i class="bi bi-people"></i>{{ 'Members'|tr:preferred_language }}
+            </a>
+            <a href="{% url 'event_detail' e.pk %}" class="btn-edit">
+              <i class="bi bi-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+          <tr><td colspan="7" class="text-center text-muted py-4">{{ 'No Completed Events Yet'|tr:preferred_language }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

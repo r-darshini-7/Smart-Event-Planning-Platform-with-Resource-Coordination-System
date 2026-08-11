@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}Delete Sponsor{% endblock %}
+{% block content %}
+<div class="page-header"><h2>Delete Sponsor</h2></div>
+<div class="card"><div class="card-body">
+  <p>Delete <strong>{{ sponsor.name }}</strong>?</p>
+  <form method="post">{% csrf_token %}
+    <button type="submit" class="btn btn-danger">Yes, Delete</button>
+    <a href="{% url 'sponsor_list' %}" class="btn-cancel ms-2">Cancel</a>
+  </form>
+</div></div>
+{% endblock %}

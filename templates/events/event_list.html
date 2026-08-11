@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+{% block title %}{{ 'Event List'|tr:preferred_language }} — {{ 'Event Registration Platform'|tr:preferred_language }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-calendar3 me-2 text-primary"></i>{{ 'Event List'|tr:preferred_language }}</h2>
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">{{ 'Home'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item active">{{ 'Event List'|tr:preferred_language }}</li>
+    </ol>
+  </nav>
+</div>
+
+<div class="card">
+  <div class="card-header-custom">
+    <h5>{{ 'All Events'|tr:preferred_language }}</h5>
+    {% if user.is_staff %}
+    <a href="{% url 'create_event' %}" class="btn btn-success btn-sm">
+      <i class="bi bi-plus-circle me-1"></i>{{ 'Create New Event'|tr:preferred_language }}
+    </a>
+    {% endif %}
+  </div>
+  <div class="p-0">
+    {% if user.is_staff %}
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th>#</th><th>UID</th><th>{{ 'Title'|tr:preferred_language }}</th><th>{{ 'Category'|tr:preferred_language }}</th>
+          <th>{{ 'Image'|tr:preferred_language }}</th><th>{{ 'Start'|tr:preferred_language }}</th><th>{{ 'Venue'|tr:preferred_language }}</th>
+          <th>{{ 'Status'|tr:preferred_language }}</th><th>{{ 'Actions'|tr:preferred_language }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in events %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td><code>{{ e.uid }}</code></td>
+          <td class="fw-semibold">{{ e.title }}</td>
+          <td>{{ e.category.name|default:"—" }}</td>
+          <td>
+            {% if e.image %}
+              <img src="{{ e.image.url }}" height="38" style="border-radius:4px;" alt="">
+            {% else %}—{% endif %}
+          </td>
+          <td>{{ e.start_time|date:"d M Y H:i" }}</td>
+          <td>{{ e.venue_name|default:"—" }}</td>
+          <td><span class="badge-status badge-{{ e.status }}">{{ e.status|title }}</span></td>
+          <td>
+            <a href="{% url 'event_detail' e.pk %}" class="btn-view"><i class="bi bi-eye"></i></a>
+            {% if user.is_staff %}
+            <a href="{% url 'create_event' %}?edit={{ e.pk }}"   class="btn-edit"><i class="bi bi-pencil"></i></a>
+            <a href="{% url 'delete_event' e.pk %}" class="btn-del"><i class="bi bi-trash"></i></a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+          <tr><td colspan="9" class="text-center text-muted py-4">{{ 'No Events Found'|tr:preferred_language }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      {% if events_by_category %}
+        {% for cat_name, obj in events_by_category.items %}
+          <div class="category-group mb-4">
+            <h5 class="mb-2">{{ cat_name }}</h5>
+            <div class="list-group">
+              <style>
+                .event-card { background: #f7fbff; border-radius: .6rem; padding: 1rem; margin-bottom: .6rem; display:flex; justify-content:space-between; align-items:center; text-decoration:none; color:inherit; }
+                .event-card:hover { box-shadow: 0 8px 20px rgba(10,40,100,0.08); transform: translateY(-2px); }
+                .event-card .meta { color: #6b7280; }
+              </style>
+              {% for e in obj.events %}
+                <a href="{% url 'event_detail' e.pk %}" class="event-card">
+                  <div>
+                    <div class="fw-semibold">{{ e.title }}</div>
+                    <div class="small text-muted">{{ e.start_time|date:"d M Y H:i" }} • {{ e.venue_name|default:"—" }}</div>
+                  </div>
+                  <div>
+                    {% if e.image %}<img src="{{ e.image.url }}" height="38" style="border-radius:4px;" alt="">{% endif %}
+                  </div>
+                </a>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="text-center text-muted py-4">{{ 'No Events Found'|tr:preferred_language }}</div>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

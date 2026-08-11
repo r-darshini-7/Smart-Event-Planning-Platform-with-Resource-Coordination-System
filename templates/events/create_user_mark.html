@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+{% block title %}{{ 'Create User Mark'|tr:preferred_language }} — {{ 'Event Registration Platform'|tr:preferred_language }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-pencil-fill me-2 text-primary"></i>{{ 'Create User Mark'|tr:preferred_language }}</h2>
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">{{ 'Home'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'user_mark_list' %}">{{ 'User Mark List'|tr:preferred_language }}</a></li>
+      <li class="breadcrumb-item active">{{ 'Create Mark'|tr:preferred_language }}</li>
+    </ol>
+  </nav>
+</div>
+
+<div class="form-section">
+  <div class="form-section-header">
+    <h5><i class="bi bi-journal-check me-2"></i>{{ 'Attendance & Mark Entry'|tr:preferred_language }}</h5>
+  </div>
+  <div class="form-section-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label">{{ 'Event'|tr:preferred_language }} <span class="text-danger">*</span></label>
+        {{ form.event }}
+        {% if form.event.errors %}<div class="text-danger small">{{ form.event.errors }}</div>{% endif %}
+      </div>
+      <div class="mb-3">
+        <label class="form-label">{{ 'User'|tr:preferred_language }} <span class="text-danger">*</span></label>
+        {{ form.user }}
+        {% if form.user.errors %}<div class="text-danger small">{{ form.user.errors }}</div>{% endif %}
+      </div>
+      <div class="mb-3">
+        <label class="form-label">{{ 'Marks'|tr:preferred_language }}</label>
+        {{ form.marks }}
+      </div>
+      <div class="mb-3">
+        <div class="d-flex align-items-center gap-2">
+          {{ form.is_absent }}
+          <label class="form-check-label fw-semibold text-danger">{{ 'Mark as Absent'|tr:preferred_language }}</label>
+        </div>
+      </div>
+      <div class="mb-4">
+        <label class="form-label">{{ 'Notes'|tr:preferred_language }}</label>
+        {{ form.notes }}
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn-submit"><i class="bi bi-save me-1"></i>{{ 'Save Mark'|tr:preferred_language }}</button>
+        <a href="{% url 'user_mark_list' %}" class="btn-cancel">{{ 'Cancel'|tr:preferred_language }}</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

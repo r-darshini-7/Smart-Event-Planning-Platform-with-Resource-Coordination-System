@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+{% block title %}{{ 'Login'|tr:preferred_language }} — {{ 'Event Registration Platform'|tr:preferred_language }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Hide sidebar/navbar on login page */
+  #sidebar, #top-navbar { display: none !important; }
+  .site-footer { display: none !important; }
+  #main-wrap {
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: 100vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
+  }
+
+  .login-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 2.5rem 2.25rem;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.35);
+  }
+  .login-logo { text-align: center; margin-bottom: 1.75rem; }
+  .login-logo .logo-icon {
+    width: 64px; height: 64px; border-radius: 16px;
+    background: #3b82f6;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto .9rem;
+    font-size: 1.8rem; color: #fff;
+  }
+  .login-logo h2 { font-size: 1.5rem; font-weight: 800; margin: 0 0 .25rem; color: #1e293b; }
+  .login-logo p  { color: #64748b; font-size: .875rem; margin: 0; }
+  .login-divider { border: none; border-top: 1px solid #e2e8f0; margin: 1.25rem 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-card">
+  <div class="login-logo">
+    <div class="logo-icon"><i class="bi bi-calendar-event-fill"></i></div>
+    <h2>EventHub</h2>
+    <p>{{ 'Event Registration Platform'|tr:preferred_language }}</p>
+  </div>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="alert alert-danger border-0 py-2 px-3 mb-3" style="background:#fee2e2;color:#991b1b;border-radius:8px;font-size:.875rem;">
+        <i class="bi bi-exclamation-circle me-1"></i>{{ msg }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label fw-semibold" style="font-size:.875rem;">{{ 'Sign in mode'|tr:preferred_language }}</label>
+      <div class="d-flex gap-3">
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="mode" id="modeUser" value="user" checked>
+          <label class="form-check-label" for="modeUser">{{ 'User'|tr:preferred_language }}</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="mode" id="modeAdmin" value="admin">
+          <label class="form-check-label" for="modeAdmin">{{ 'Admin'|tr:preferred_language }}</label>
+        </div>
+      </div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label fw-semibold" style="font-size:.875rem;">{{ 'Username'|tr:preferred_language }}</label>
+      <div class="input-group">
+        <span class="input-group-text bg-light border-end-0"><i class="bi bi-person text-muted"></i></span>
+        <input type="text" name="username" class="form-control border-start-0 ps-0"
+               placeholder="{{ 'Enter username'|tr:preferred_language }}" required autofocus
+               style="border-left:none;" />
+      </div>
+    </div>
+    <div class="mb-4">
+      <label class="form-label fw-semibold" style="font-size:.875rem;">{{ 'Password'|tr:preferred_language }}</label>
+      <div class="input-group">
+        <span class="input-group-text bg-light border-end-0"><i class="bi bi-lock text-muted"></i></span>
+        <input type="password" name="password" class="form-control border-start-0 ps-0"
+               placeholder="{{ 'Enter password'|tr:preferred_language }}" required
+               style="border-left:none;" />
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary w-100 fw-semibold py-2" style="font-size:.95rem;">
+      <i class="bi bi-box-arrow-in-right me-1"></i>{{ 'Login'|tr:preferred_language }}
+    </button>
+  </form>
+
+  <hr class="login-divider">
+  <p id="signup-prompt" class="text-center mb-1" style="font-size:.85rem;color:#64748b;">
+    {{ 'Don\'t have an account?'|tr:preferred_language }} <a href="{% url 'signup' %}">{{ 'Sign up'|tr:preferred_language }}</a>
+  </p>
+  <p class="text-center mb-0" style="font-size:.75rem;color:#94a3b8;">{{ 'Use admin mode to sign in as staff.'|tr:preferred_language }}</p>
+</div>
+
+<script>
+  (function(){
+    var adminRadio = document.getElementById('modeAdmin');
+    var userRadio = document.getElementById('modeUser');
+    var signupPrompt = document.getElementById('signup-prompt');
+    function toggleSignup(){
+      if(adminRadio && adminRadio.checked){
+        signupPrompt && (signupPrompt.style.display = 'none');
+      } else {
+        signupPrompt && (signupPrompt.style.display = 'block');
+      }
+    }
+    if(adminRadio){
+      adminRadio.addEventListener('change', toggleSignup);
+    }
+    if(userRadio){
+      userRadio.addEventListener('change', toggleSignup);
+    }
+    // run on load
+    toggleSignup();
+  })();
+</script>
+{% endblock %}
