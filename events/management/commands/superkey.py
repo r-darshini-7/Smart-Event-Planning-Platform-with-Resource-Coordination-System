@@ -35,4 +35,3 @@ class Command(BaseCommand):
         if email:
             self.stdout.write(f'Email: {email}')
         self.stdout.write(f'Password: {password}')
-*** End Patch
