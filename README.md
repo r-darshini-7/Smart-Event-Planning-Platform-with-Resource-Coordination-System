@@ -1,14 +1,14 @@
-EventOn - Event Registration & Management Platform
+# EventOn - Event Registration & Management Platform
 EventOn is a full-stack Event Management & Registration web platform built with Python (Django MVT). It provides a dual-portal interface for attendees and event administrators.
 
-🚀 Key Features
+# 🚀 Key Features
 Attendee Portal: Event discovery across categories (Tech Fests, Hackathons, Seminars), instant registration, automated QR-pass generation via qrcode & Pillow, and profile customization (Dark/Light mode).
 
 Admin Dashboard: Real-time KPI summary widgets, Chart.js analytics for registrations and budget tracking, and a built-in camera QR scanner for attendee check-ins.
 
 Logistics & Financials: Full CRUD management for venues, resources, vendor assignments, sponsorship tiers, and budget approval workflows.
 
-🛠️ Tech Stack
+# 🛠️ Tech Stack
 Backend: Python, Django (MVT)
 
 Frontend: HTML5, CSS3, JavaScript, Bootstrap 5, AdminLTE, Chart.js
@@ -17,11 +17,11 @@ Libraries: Pillow, qrcode, asgiref, colorama
 
 Database: SQLite / PostgreSQL
 
-⚡ Quick Start
+# ⚡ Quick Start
 Bash
 # 1. Clone repo & create virtual environment
-git clone https://github.com/your-username/EventOn.git
-cd EventOn
+git clone https://github.com/r-darshini-7/Smart-Event-Planning-Platform-with-Resource-Coordination-System.git
+cd events
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
