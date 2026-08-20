@@ -606,6 +606,7 @@ class Profile(models.Model):
     contact_email = models.EmailField(blank=True)
     organization = models.CharField(max_length=255, blank=True)
     location = models.CharField(max_length=255, blank=True)
+    is_organizer = models.BooleanField(default=False, help_text='Organizers can access admin features')
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):

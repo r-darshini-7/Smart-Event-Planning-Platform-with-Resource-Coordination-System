@@ -15,6 +15,7 @@ from django.utils.text import slugify
 from django.core.mail import send_mail
 from functools import wraps
 import json
+import re
 from datetime import datetime
 
 import base64
@@ -65,8 +66,13 @@ def login_view(request):
 
         user = authenticate(request, username=username, password=password)
         if user:
-            # admin mode requires staff status
-            if mode == 'admin' and not user.is_staff:
+            # admin mode requires staff status OR organizer role
+            is_organizer = False
+            try:
+                is_organizer = getattr(user.profile, 'is_organizer', False)
+            except Exception:
+                pass
+            if mode == 'admin' and not user.is_staff and not is_organizer:
                 messages.error(request, translate_text('Admin credentials required for admin sign-in.', _get_request_language(request)))
             else:
                 login(request, user)
@@ -406,8 +412,31 @@ def create_event_category(request):
 
 @login_required
 def event_category(request):
+    query       = request.GET.get('q', '').strip()
+    status_f    = request.GET.get('status', '').strip()
+    sort_by     = request.GET.get('sort', 'priority').strip()
+
+    VALID_SORTS = ['priority', 'name', '-name', '-created_at']
+    if sort_by not in VALID_SORTS:
+        sort_by = 'priority'
+
     categories = Category.objects.all()
-    return render(request, 'events/event_category.html', {'categories': categories})
+    if query:
+        from django.db.models import Q
+        categories = categories.filter(
+            Q(name__icontains=query) | Q(code__icontains=query)
+        )
+    if request.user.is_staff and status_f:
+        categories = categories.filter(status=status_f)
+
+    categories = categories.order_by(sort_by)
+
+    return render(request, 'events/event_category.html', {
+        'categories': categories,
+        'filter_search': query,
+        'filter_status': status_f,
+        'filter_sort': sort_by,
+    })
 
 
 @admin_required
@@ -543,45 +572,107 @@ def create_event(request):
 
 @login_required
 def event_list(request):
-    query = request.GET.get('q', '').strip()
-    # Admins see all events in a table. Regular users see only live events,
-    # grouped by category for easier browsing.
+    from collections import OrderedDict
+    query       = request.GET.get('q', '').strip()
+    status_f    = request.GET.get('status', '').strip()
+    event_type_f = request.GET.get('event_type', '').strip()
+    category_f  = request.GET.get('category', '').strip()
+    date_from   = request.GET.get('date_from', '').strip()
+    date_to     = request.GET.get('date_to', '').strip()
+    price_min   = request.GET.get('price_min', '').strip()
+    price_max   = request.GET.get('price_max', '').strip()
+    sort_by     = request.GET.get('sort', '-start_time').strip()
+
+    VALID_SORTS = ['-start_time', 'start_time', 'title', '-title', 'price', '-price', '-created_at']
+    if sort_by not in VALID_SORTS:
+        sort_by = '-start_time'
+
+    all_categories = Category.objects.all().order_by('name')
+
     if request.user.is_staff:
         events = Event.objects.select_related('category').all()
-        if query:
-            events = events.filter(
-                Q(title__icontains=query) |
-                Q(category__name__icontains=query)
-            )
-        return render(request, 'events/event_list.html', {
-            'events': events,
-            'search_query': query,
-        })
+    else:
+        events = Event.objects.filter(status='live').select_related('category')
 
-    # Regular user view: only live events
-    events = Event.objects.filter(status='live').select_related('category').order_by('-start_time')
+    # ── shared filters ──
     if query:
         events = events.filter(
             Q(title__icontains=query) |
-            Q(category__name__icontains=query)
+            Q(category__name__icontains=query) |
+            Q(venue_name__icontains=query) |
+            Q(description__icontains=query)
         )
+    if event_type_f:
+        events = events.filter(event_type=event_type_f)
+    if category_f:
+        events = events.filter(category__pk=category_f)
+    if date_from:
+        try:
+            from django.utils.dateparse import parse_date
+            df = parse_date(date_from)
+            if df:
+                events = events.filter(start_time__date__gte=df)
+        except Exception:
+            pass
+    if date_to:
+        try:
+            from django.utils.dateparse import parse_date
+            dt = parse_date(date_to)
+            if dt:
+                events = events.filter(start_time__date__lte=dt)
+        except Exception:
+            pass
+    if price_min:
+        try:
+            events = events.filter(price__gte=float(price_min))
+        except ValueError:
+            pass
+    if price_max:
+        try:
+            events = events.filter(price__lte=float(price_max))
+        except ValueError:
+            pass
 
-    # Group events by category name (use 'Uncategorized' if none)
-    from collections import OrderedDict
+    # ── admin-only filters ──
+    if request.user.is_staff and status_f:
+        events = events.filter(status=status_f)
+
+    events = events.order_by(sort_by)
+
+    filter_ctx = {
+        'search_query': query,
+        'filter_status': status_f,
+        'filter_event_type': event_type_f,
+        'filter_category': category_f,
+        'filter_date_from': date_from,
+        'filter_date_to': date_to,
+        'filter_price_min': price_min,
+        'filter_price_max': price_max,
+        'filter_sort': sort_by,
+        'all_categories': all_categories,
+        'status_choices': Event.STATUS_CHOICES,
+        'event_type_choices': Event.EVENT_TYPE_CHOICES,
+        'valid_sorts': VALID_SORTS,
+    }
+
+    if request.user.is_staff:
+        return render(request, 'events/event_list.html', {
+            'events': events,
+            **filter_ctx,
+        })
+
+    # User view — group by category
     events_by_category = OrderedDict()
     for e in events:
         cat = e.category.name if e.category else 'Uncategorized'
         if cat not in events_by_category:
-            events_by_category[cat] = {
-                'category_obj': e.category,
-                'events': []
-            }
+            events_by_category[cat] = {'category_obj': e.category, 'events': []}
         events_by_category[cat]['events'].append(e)
 
     return render(request, 'events/event_list.html', {
         'events_by_category': events_by_category,
-        'search_query': query,
         'total_events': events.count(),
+        **filter_ctx,
     })
 
 
@@ -2555,3 +2646,207 @@ def api_checkin_by_code(request):
         'event': member.event.title,
         'check_in_time': member.check_in_time.strftime('%d %b %Y, %I:%M %p'),
     })
+
+
+# ── API: Calendar Events ───────────────────────
+@require_http_methods(['GET'])
+@login_required
+def api_calendar_events(request):
+    """Return events for a specific date (YYYY-MM-DD). Admin sees all; user sees only their registered events."""
+    from datetime import date as _date
+    date_str = request.GET.get('date', '')
+    try:
+        from django.utils.dateparse import parse_date
+        selected_date = parse_date(date_str)
+        if not selected_date:
+            selected_date = timezone.now().date()
+    except Exception:
+        selected_date = timezone.now().date()
+
+    # Enforce: only current + future dates
+    today = timezone.now().date()
+    if selected_date < today:
+        selected_date = today
+
+    qs = Event.objects.filter(
+        start_time__date=selected_date
+    ).order_by('start_time')
+
+    if not request.user.is_staff:
+        # user sees only their registered events
+        registered_event_ids = EventMember.objects.filter(user=request.user).values_list('event_id', flat=True)
+        qs = qs.filter(pk__in=registered_event_ids)
+
+    data = [{
+        'id': e.pk,
+        'title': e.title,
+        'start_time': e.start_time.strftime('%H:%M'),
+        'end_time': e.end_time.strftime('%H:%M'),
+        'status': e.status,
+        'venue': e.venue_name or (e.venue.name if e.venue else ''),
+        'event_type': e.event_type,
+        'url': f'/event-detail/{e.pk}/',
+    } for e in qs]
+
+    # Also return dates with events for the current month (for dot indicators)
+    month_start = selected_date.replace(day=1)
+    import calendar as _cal
+    last_day = _cal.monthrange(selected_date.year, selected_date.month)[1]
+    month_end = selected_date.replace(day=last_day)
+
+    # month_start is already >= today if today is later in the month;
+    # use max(month_start, today) so past days this month are excluded
+    effective_start = max(month_start, today)
+    month_qs = Event.objects.filter(
+        start_time__date__gte=effective_start,
+        start_time__date__lte=month_end,
+    )
+    if not request.user.is_staff:
+        registered_event_ids = EventMember.objects.filter(user=request.user).values_list('event_id', flat=True)
+        month_qs = month_qs.filter(pk__in=registered_event_ids)
+
+    event_dates = list(set(month_qs.values_list('start_time__date', flat=True)))
+    event_dates_str = [str(d) for d in event_dates]
+
+    return _json_response({
+        'date': str(selected_date),
+        'events': data,
+        'event_dates': event_dates_str,
+    })
+
+
+# ── API: Eventon Chatbot ───────────────────────
+def _chatbot_event_reply(request, user_message):
+    """Answer common Eventon questions using the current user's site data."""
+    question = user_message.lower()
+    is_admin = request.user.is_staff or getattr(getattr(request.user, 'profile', None), 'is_organizer', False)
+
+    events = Event.objects.select_related('category', 'venue').all()
+    event = events.filter(Q(title__iexact=user_message) | Q(uid__iexact=user_message)).first()
+    if not event:
+        event_terms = [term for term in user_message.split() if len(term) > 2]
+        if event_terms:
+            event = events.filter(
+                *[Q(title__icontains=term) | Q(uid__icontains=term) for term in event_terms]
+            ).first()
+
+    asks_for_details = any(word in question for word in (
+        'detail', 'about', 'information', 'info', 'when', 'where', 'venue',
+        'speaker', 'session', 'price', 'cost', 'fee', 'schedule', 'date',
+    ))
+    if event and (asks_for_details or len(user_message.split()) > 1 or user_message.lower() == event.title.lower()):
+        venue = event.venue.name if event.venue else event.venue_name or event.location or 'Venue to be announced'
+        category = event.category.name if event.category else event.get_event_type_display()
+        status = event.get_status_display()
+        price = 'Free' if not event.price else f'₹{event.price}'
+        reply = (
+            f"**{event.title}**\n"
+            f"Status: {status}\n"
+            f"Date: {timezone.localtime(event.start_time).strftime('%d %b %Y, %I:%M %p')}\n"
+            f"Venue: {venue}\n"
+            f"Category: {category}\n"
+            f"Price: {price}\n"
+            f"Capacity: {event.max_attendance}\n"
+        )
+        if event.speaker_name:
+            reply += f"Speaker: {event.speaker_name}\n"
+        if event.description:
+            reply += f"Description: {event.description[:280]}\n"
+        reply += f"Open event details: /event-detail/{event.pk}/"
+        if not is_admin and event.status == 'live':
+            reply += f"\nRegister here: /register-event/{event.pk}/"
+        return reply
+
+    if is_admin and re.search(r'categor(y|ies)|category', question):
+        return (
+            "In admin mode, open **Create Event Category** from the sidebar or visit "
+            "/create-event-category/. Enter the category name and code, choose its priority and status, "
+            "optionally upload an image, then select **Save Category**."
+        )
+    if is_admin and re.search(r'create|add|make|publish', question) and 'event' in question:
+        return (
+            "In admin mode, open **Create Event** from the sidebar or visit /create-event/. "
+            "Fill in the title, category, date and time, venue, capacity, price, and description. "
+            "Save the event, then update its status when it is ready to publish."
+        )
+    if re.search(r'register|sign up|join', question):
+        return (
+            "To register as a user, open **Event List**, select an event, review its details, "
+            "and choose **Register**. Complete payment if the event has a fee. Your confirmation and QR code "
+            "are available in **My Activity**."
+        )
+    if re.search(r'event list|browse|find|upcoming|available', question):
+        return "Users can browse available events from **Event List** or the dashboard, then open any event to view its details."
+    if re.search(r'certificate|my activity|qr|check.?in', question):
+        return "Registered users can open **My Activity** to view registrations, QR codes, downloads, and certificates when available."
+    if re.search(r'help|what can|how', question):
+        role = 'admin' if is_admin else 'user'
+        return (
+            f"You are using Eventon in **{role} mode**. Ask me about an event name, "
+            "how to register, event details, or how to create an event/category."
+        )
+    return "I can answer questions about Eventon events, event details, registration, categories, and admin workflows."
+
+
+@csrf_exempt
+@login_required
+def api_chatbot(request):
+    """Answer Eventon questions from local site data, with Gemini as an optional fallback."""
+    if request.method != 'POST':
+        return _json_response({'error': 'POST required'}, 405)
+    try:
+        payload = _json.loads(request.body)
+    except Exception:
+        return _json_response({'error': 'Invalid JSON'}, 400)
+
+    user_message = (payload.get('message') or '').strip()
+    if not user_message:
+        return _json_response({'error': 'message is required'}, 400)
+
+    local_reply = _chatbot_event_reply(request, user_message)
+    if local_reply:
+        return _json_response({'reply': local_reply})
+
+    from django.conf import settings as _settings
+    import urllib.request as _urllib_request
+    import urllib.error as _urllib_error
+
+    api_key = getattr(_settings, 'GEMINI_API_KEY', '')
+    if not api_key:
+        return _json_response({'error': 'Gemini API key not configured.'}, 503)
+
+    system_instruction = (
+        "You are Eventon Assistant, an AI chatbot for the Eventon event management platform. "
+        "You ONLY answer questions related to events, event registration, event schedules, "
+        "venues, categories, speakers, tickets, QR codes, attendance, certificates, "
+        "event prices, organizers, and event platform features. "
+        "If the user asks anything unrelated to events or the Eventon platform, politely redirect them. "
+        "Keep answers concise and helpful."
+    )
+
+    # Build Gemini API request
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+    body = _json.dumps({
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": f"{system_instruction}\n\nUser question: {user_message}"}]
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.7,
+            "maxOutputTokens": 512,
+        }
+    }).encode('utf-8')
+
+    req = _urllib_request.Request(url, data=body, headers={'Content-Type': 'application/json'}, method='POST')
+    try:
+        with _urllib_request.urlopen(req, timeout=15) as resp:
+            result = _json.loads(resp.read().decode('utf-8'))
+        reply = result['candidates'][0]['content']['parts'][0]['text']
+        return _json_response({'reply': reply})
+    except _urllib_error.HTTPError as e:
+        err_body = e.read().decode('utf-8', errors='replace')
+        return _json_response({'error': f'Gemini API error {e.code}: {err_body}'}, 502)
+    except Exception as e:
+        return _json_response({'error': str(e)}, 502)

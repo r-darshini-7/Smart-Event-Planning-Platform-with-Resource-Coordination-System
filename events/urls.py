@@ -124,4 +124,6 @@ urlpatterns = [
     path('api/venues/',                        views.api_venues,        name='api_venues'),
     path('api/analytics/',                     views.api_analytics,     name='api_analytics'),
     path('api/checkin-by-code/',               views.api_checkin_by_code, name='api_checkin_by_code'),
+    path('api/calendar-events/',               views.api_calendar_events, name='api_calendar_events'),
+    path('api/chatbot/',                       views.api_chatbot,         name='api_chatbot'),
 ]

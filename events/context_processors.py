@@ -16,7 +16,7 @@ def preferred_language(request):
         return translate_text(text, language)
 
     nav_labels = {
-        'admin_panel': translate('UpEvent'),
+        'admin_panel': translate('Eventon'),
         'main_navigation': translate('MAIN NAVIGATION'),
         'event_category_header': translate('EVENT CATEGORY'),
         'events_header': translate('EVENTS'),

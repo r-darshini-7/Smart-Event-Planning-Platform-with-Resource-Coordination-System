@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import (
-    Category, Event, EventMember, EventWish, UserMark,
+    Category, Event, EventMember, EventWish, UserMark, Profile,
     Venue, Resource, Vendor, Sponsor,
     VenueBooking, ResourceAllocation, VendorAssignment,
     BudgetItem, ApprovalRequest, EventLifecycleLog, Notification,
@@ -100,6 +100,13 @@ class ApprovalRequestAdmin(admin.ModelAdmin):
 @admin.register(EventLifecycleLog)
 class EventLifecycleLogAdmin(admin.ModelAdmin):
     list_display = ['event', 'from_status', 'to_status', 'changed_by', 'changed_at']
+
+
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = ['user', 'organization', 'phone', 'is_organizer']
+    list_filter = ['is_organizer']
+    search_fields = ['user__username', 'user__email', 'organization']
 
 
 @admin.register(Notification)

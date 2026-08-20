@@ -1,94 +1,443 @@
 {% extends 'base.html' %}
 {% load translate_tags %}
-{% block title %}{{ 'Event List'|tr:preferred_language }} — {{ 'Event Registration Platform'|tr:preferred_language }}{% endblock %}
+{% block title %}{{ 'Event List'|tr:preferred_language }} — Eventon{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Floating Filter FAB ─────────────────────────────────────── */
+  .filter-fab {
+    position: fixed;
+    bottom: calc(var(--fh) + 1.25rem);
+    left: calc(var(--sw) + 1.25rem);
+    z-index: 1020;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--teal);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(23,162,184,.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    transition: background .15s, transform .15s, box-shadow .15s;
+  }
+  .filter-fab:hover {
+    background: #138496;
+    transform: scale(1.08);
+    box-shadow: 0 6px 22px rgba(23,162,184,.55);
+  }
+  .filter-fab .fab-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: var(--danger);
+    color: #fff;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: .65rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    display: none;
+  }
+  .filter-fab .fab-badge.visible { display: flex; }
+  body.sb-collapsed .filter-fab { left: 1.25rem; }
+
+  /* ── Filter Drawer ────────────────────────────────────────────── */
+  .filter-drawer {
+    position: fixed;
+    bottom: calc(var(--fh) + 4.5rem);
+    left: calc(var(--sw) + 1.25rem);
+    z-index: 1019;
+    width: 310px;
+    max-height: calc(100vh - var(--nh) - var(--fh) - 6rem);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 8px 32px rgba(0,0,0,.18);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: translateY(20px) scale(.97);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform .22s cubic-bezier(.4,0,.2,1), opacity .22s;
+  }
+  .filter-drawer.open {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    pointer-events: auto;
+  }
+  body.sb-collapsed .filter-drawer { left: 1.25rem; }
+
+  .filter-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .7rem 1rem;
+    border-bottom: 1px solid var(--border);
+    font-weight: 700;
+    font-size: .85rem;
+    color: var(--muted);
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .filter-drawer-body {
+    overflow-y: auto;
+    padding: .85rem 1rem;
+    flex: 1;
+  }
+  .filter-drawer-body label {
+    font-size: .76rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: .18rem;
+    display: block;
+  }
+  .filter-drawer-body .form-control,
+  .filter-drawer-body .form-select {
+    font-size: .83rem;
+    padding: .32rem .6rem;
+    margin-bottom: .65rem;
+  }
+  .filter-drawer-footer {
+    display: flex;
+    gap: .5rem;
+    padding: .65rem 1rem;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  /* ── Active-filter chips (compact, shown in main area) ────────── */
+  .active-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+    margin-bottom: .9rem;
+  }
+  .filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    background: var(--teal-bg);
+    color: var(--teal);
+    border-radius: 20px;
+    padding: .18rem .6rem;
+    font-size: .76rem;
+    font-weight: 600;
+  }
+  .filter-chip a { color: inherit; text-decoration: none; font-size: .8rem; }
+
+  /* ── Event cards ──────────────────────────────────────────────── */
+  .event-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+    margin-bottom: .65rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
+    transition: box-shadow .15s, transform .12s;
+  }
+  .event-card:hover {
+    box-shadow: 0 6px 20px rgba(10,40,100,0.1);
+    transform: translateY(-2px);
+    color: inherit;
+  }
+  .event-card .ev-meta { color: var(--muted); font-size: .8rem; margin-top: .2rem; }
+  .results-count { font-size: .82rem; color: var(--muted); margin-bottom: .75rem; }
+
+  @media(max-width:768px){
+    .filter-fab { left: 1.25rem; }
+    .filter-drawer { left: 1.25rem; right: 1.25rem; width: auto; }
+  }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="page-header">
-  <h2><i class="bi bi-calendar3 me-2 text-primary"></i>{{ 'Event List'|tr:preferred_language }}</h2>
-  <nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">{{ 'Home'|tr:preferred_language }}</a></li>
-      <li class="breadcrumb-item active">{{ 'Event List'|tr:preferred_language }}</li>
-    </ol>
-  </nav>
+  <div>
+    <h2><i class="bi bi-calendar3 me-2 text-primary"></i>{{ 'Event List'|tr:preferred_language }}</h2>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">{{ 'Home'|tr:preferred_language }}</a></li>
+        <li class="breadcrumb-item active">{{ 'Event List'|tr:preferred_language }}</li>
+      </ol>
+    </nav>
+  </div>
+  {% if user.is_staff %}
+  <a href="{% url 'create_event' %}" class="btn btn-success btn-sm">
+    <i class="bi bi-plus-circle me-1"></i>{{ 'Create New Event'|tr:preferred_language }}
+  </a>
+  {% endif %}
 </div>
 
+<!-- ── Active filter chips ────────────────────────────────────── -->
+{% with has_filter=search_query|default:filter_event_type|default:filter_category|default:filter_status|default:filter_date_from|default:filter_date_to|default:filter_price_min|default:filter_price_max %}
+{% if has_filter %}
+<div class="active-filters">
+  {% if search_query %}<span class="filter-chip"><i class="bi bi-search"></i> "{{ search_query }}" <a href="{% url 'event_list' %}?{% if filter_event_type %}event_type={{ filter_event_type }}&{% endif %}{% if filter_category %}category={{ filter_category }}&{% endif %}{% if filter_status %}status={{ filter_status }}&{% endif %}{% if filter_date_from %}date_from={{ filter_date_from }}&{% endif %}{% if filter_date_to %}date_to={{ filter_date_to }}&{% endif %}{% if filter_price_min %}price_min={{ filter_price_min }}&{% endif %}{% if filter_price_max %}price_max={{ filter_price_max }}&{% endif %}sort={{ filter_sort }}">×</a></span>{% endif %}
+  {% if filter_event_type %}<span class="filter-chip"><i class="bi bi-tag"></i> {{ filter_event_type }}</span>{% endif %}
+  {% if filter_status %}<span class="filter-chip"><i class="bi bi-circle-half"></i> {{ filter_status }}</span>{% endif %}
+  {% if filter_date_from %}<span class="filter-chip"><i class="bi bi-calendar"></i> from {{ filter_date_from }}</span>{% endif %}
+  {% if filter_date_to %}<span class="filter-chip"><i class="bi bi-calendar"></i> to {{ filter_date_to }}</span>{% endif %}
+  {% if filter_price_min %}<span class="filter-chip"><i class="bi bi-currency-rupee"></i> ≥ {{ filter_price_min }}</span>{% endif %}
+  {% if filter_price_max %}<span class="filter-chip"><i class="bi bi-currency-rupee"></i> ≤ {{ filter_price_max }}</span>{% endif %}
+  <a href="{% url 'event_list' %}" class="filter-chip" style="background:#fee2e2;color:#991b1b;text-decoration:none;"><i class="bi bi-x-circle"></i> {{ 'Clear all'|tr:preferred_language }}</a>
+</div>
+{% endif %}
+{% endwith %}
+
+<!-- ── Admin Table View ───────────────────────────── -->
+{% if user.is_staff %}
 <div class="card">
   <div class="card-header-custom">
     <h5>{{ 'All Events'|tr:preferred_language }}</h5>
-    {% if user.is_staff %}
-    <a href="{% url 'create_event' %}" class="btn btn-success btn-sm">
-      <i class="bi bi-plus-circle me-1"></i>{{ 'Create New Event'|tr:preferred_language }}
-    </a>
-    {% endif %}
+    <span class="text-muted small">{{ events|length }} {{ 'result(s)'|tr:preferred_language }}</span>
   </div>
   <div class="p-0">
-    {% if user.is_staff %}
     <table class="table-custom">
       <thead>
         <tr>
-          <th>#</th><th>UID</th><th>{{ 'Title'|tr:preferred_language }}</th><th>{{ 'Category'|tr:preferred_language }}</th>
-          <th>{{ 'Image'|tr:preferred_language }}</th><th>{{ 'Start'|tr:preferred_language }}</th><th>{{ 'Venue'|tr:preferred_language }}</th>
-          <th>{{ 'Status'|tr:preferred_language }}</th><th>{{ 'Actions'|tr:preferred_language }}</th>
+          <th>#</th><th>UID</th>
+          <th>{{ 'Title'|tr:preferred_language }}</th>
+          <th>{{ 'Category'|tr:preferred_language }}</th>
+          <th>{{ 'Type'|tr:preferred_language }}</th>
+          <th>{{ 'Start'|tr:preferred_language }}</th>
+          <th>{{ 'Venue'|tr:preferred_language }}</th>
+          <th>{{ 'Price'|tr:preferred_language }}</th>
+          <th>{{ 'Status'|tr:preferred_language }}</th>
+          <th>{{ 'Actions'|tr:preferred_language }}</th>
         </tr>
       </thead>
       <tbody>
         {% for e in events %}
         <tr>
           <td>{{ forloop.counter }}</td>
-          <td><code>{{ e.uid }}</code></td>
-          <td class="fw-semibold">{{ e.title }}</td>
-          <td>{{ e.category.name|default:"—" }}</td>
-          <td>
-            {% if e.image %}
-              <img src="{{ e.image.url }}" height="38" style="border-radius:4px;" alt="">
-            {% else %}—{% endif %}
+          <td><code style="font-size:.75rem;">{{ e.uid }}</code></td>
+          <td class="fw-semibold">
+            {% if e.image %}<img src="{{ e.image.url }}" height="28" style="border-radius:4px;margin-right:.4rem;" alt="">{% endif %}
+            {{ e.title }}
           </td>
-          <td>{{ e.start_time|date:"d M Y H:i" }}</td>
+          <td>{{ e.category.name|default:"—" }}</td>
+          <td><span class="badge bg-secondary">{{ e.get_event_type_display }}</span></td>
+          <td style="white-space:nowrap;">{{ e.start_time|date:"d M Y H:i" }}</td>
           <td>{{ e.venue_name|default:"—" }}</td>
-          <td><span class="badge-status badge-{{ e.status }}">{{ e.status|title }}</span></td>
-          <td>
-            <a href="{% url 'event_detail' e.pk %}" class="btn-view"><i class="bi bi-eye"></i></a>
-            {% if user.is_staff %}
-            <a href="{% url 'create_event' %}?edit={{ e.pk }}"   class="btn-edit"><i class="bi bi-pencil"></i></a>
-            <a href="{% url 'delete_event' e.pk %}" class="btn-del"><i class="bi bi-trash"></i></a>
-            {% endif %}
+          <td>{% if e.price == 0 %}<span class="text-success fw-semibold">Free</span>{% else %}₹{{ e.price }}{% endif %}</td>
+          <td><span class="badge-status badge-{{ e.status }}">{{ e.get_status_display }}</span></td>
+          <td style="white-space:nowrap;">
+            <a href="{% url 'event_detail' e.pk %}" class="btn-view btn-sm"><i class="bi bi-eye"></i></a>
+            <a href="{% url 'edit_event' e.pk %}"   class="btn-edit btn-sm"><i class="bi bi-pencil"></i></a>
+            <a href="{% url 'delete_event' e.pk %}" class="btn-del btn-sm"><i class="bi bi-trash"></i></a>
           </td>
         </tr>
         {% empty %}
-          <tr><td colspan="9" class="text-center text-muted py-4">{{ 'No Events Found'|tr:preferred_language }}</td></tr>
+        <tr><td colspan="10" class="text-center text-muted py-4">{{ 'No Events Found'|tr:preferred_language }}</td></tr>
         {% endfor %}
       </tbody>
     </table>
-    {% else %}
-      {% if events_by_category %}
-        {% for cat_name, obj in events_by_category.items %}
-          <div class="category-group mb-4">
-            <h5 class="mb-2">{{ cat_name }}</h5>
-            <div class="list-group">
-              <style>
-                .event-card { background: #f7fbff; border-radius: .6rem; padding: 1rem; margin-bottom: .6rem; display:flex; justify-content:space-between; align-items:center; text-decoration:none; color:inherit; }
-                .event-card:hover { box-shadow: 0 8px 20px rgba(10,40,100,0.08); transform: translateY(-2px); }
-                .event-card .meta { color: #6b7280; }
-              </style>
-              {% for e in obj.events %}
-                <a href="{% url 'event_detail' e.pk %}" class="event-card">
-                  <div>
-                    <div class="fw-semibold">{{ e.title }}</div>
-                    <div class="small text-muted">{{ e.start_time|date:"d M Y H:i" }} • {{ e.venue_name|default:"—" }}</div>
-                  </div>
-                  <div>
-                    {% if e.image %}<img src="{{ e.image.url }}" height="38" style="border-radius:4px;" alt="">{% endif %}
-                  </div>
-                </a>
-              {% endfor %}
-            </div>
-          </div>
-        {% endfor %}
-      {% else %}
-        <div class="text-center text-muted py-4">{{ 'No Events Found'|tr:preferred_language }}</div>
-      {% endif %}
-    {% endif %}
   </div>
 </div>
+
+{% else %}
+<!-- ── User Card View ──────────────────────────────── -->
+<p class="results-count">
+  <i class="bi bi-info-circle me-1"></i>
+  {% if total_events %}{{ total_events }} {{ 'event(s) found'|tr:preferred_language }}{% else %}{{ 'No events match your filters.'|tr:preferred_language }}{% endif %}
+</p>
+
+{% if events_by_category %}
+  {% for cat_name, obj in events_by_category.items %}
+  <div class="mb-4">
+    <h5 class="mb-3 d-flex align-items-center gap-2">
+      <i class="bi bi-folder2-open text-primary"></i>{{ cat_name }}
+      <span class="badge bg-primary rounded-pill" style="font-size:.7rem;">{{ obj.events|length }}</span>
+    </h5>
+    {% for e in obj.events %}
+    <a href="{% url 'event_detail' e.pk %}" class="event-card">
+      <div style="flex:1;min-width:0;">
+        <div class="fw-semibold">{{ e.title }}</div>
+        <div class="ev-meta">
+          <i class="bi bi-calendar me-1"></i>{{ e.start_time|date:"d M Y H:i" }}
+          {% if e.venue_name %}&nbsp;·&nbsp;<i class="bi bi-geo-alt me-1"></i>{{ e.venue_name }}{% endif %}
+          &nbsp;·&nbsp;<span class="badge bg-secondary" style="font-size:.68rem;">{{ e.get_event_type_display }}</span>
+        </div>
+      </div>
+      <div class="d-flex align-items-center gap-3 ms-3">
+        {% if e.price == 0 %}
+          <span class="badge bg-success">Free</span>
+        {% else %}
+          <span class="fw-semibold" style="font-size:.88rem;">₹{{ e.price }}</span>
+        {% endif %}
+        {% if e.image %}<img src="{{ e.image.url }}" height="44" style="border-radius:6px;" alt="">{% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="card p-4 text-center text-muted">
+    <i class="bi bi-calendar-x" style="font-size:2.5rem;opacity:.4;"></i>
+    <p class="mt-2">{{ 'No events match your filters. Try adjusting them.'|tr:preferred_language }}</p>
+    <a href="{% url 'event_list' %}" class="btn btn-outline-primary btn-sm mt-1">{{ 'Clear Filters'|tr:preferred_language }}</a>
+  </div>
+{% endif %}
+{% endif %}
+
+<!-- ── Floating Filter FAB ─────────────────────────────────────── -->
+<button class="filter-fab" id="filterFab" title="{{ 'Filters'|tr:preferred_language }}" aria-label="{{ 'Open filters'|tr:preferred_language }}">
+  <i class="bi bi-funnel-fill"></i>
+  <span class="fab-badge" id="filterBadge"></span>
+</button>
+
+<!-- ── Floating Filter Drawer ─────────────────────────────────── -->
+<div class="filter-drawer" id="filterDrawer" role="dialog" aria-label="{{ 'Filters'|tr:preferred_language }}">
+  <div class="filter-drawer-header">
+    <span><i class="bi bi-funnel-fill me-2"></i>{{ 'Filters'|tr:preferred_language }}</span>
+    <button type="button" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--muted);" id="filterDrawerClose" aria-label="Close filters">×</button>
+  </div>
+  <form method="get" action="{% url 'event_list' %}" id="filter-form">
+    <div class="filter-drawer-body">
+
+      <!-- Search -->
+      <label>{{ 'Search'|tr:preferred_language }}</label>
+      <input class="form-control" type="search" name="q" value="{{ search_query }}"
+             placeholder="{{ 'Title, venue, description…'|tr:preferred_language }}" />
+
+      <!-- Event Type -->
+      <label>{{ 'Event Type'|tr:preferred_language }}</label>
+      <select class="form-select" name="event_type">
+        <option value="">{{ 'All Types'|tr:preferred_language }}</option>
+        {% for val, lbl in event_type_choices %}
+        <option value="{{ val }}" {% if filter_event_type == val %}selected{% endif %}>{{ lbl }}</option>
+        {% endfor %}
+      </select>
+
+      <!-- Category -->
+      <label>{{ 'Category'|tr:preferred_language }}</label>
+      <select class="form-select" name="category">
+        <option value="">{{ 'All Categories'|tr:preferred_language }}</option>
+        {% for cat in all_categories %}
+        <option value="{{ cat.pk }}" {% if filter_category == cat.pk|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+        {% endfor %}
+      </select>
+
+      <!-- Status (admin only) -->
+      {% if user.is_staff %}
+      <label>{{ 'Status'|tr:preferred_language }}</label>
+      <select class="form-select" name="status">
+        <option value="">{{ 'All Statuses'|tr:preferred_language }}</option>
+        {% for val, lbl in status_choices %}
+        <option value="{{ val }}" {% if filter_status == val %}selected{% endif %}>{{ lbl }}</option>
+        {% endfor %}
+      </select>
+      {% endif %}
+
+      <!-- Date Range -->
+      <label>{{ 'From Date'|tr:preferred_language }}</label>
+      <input class="form-control" type="date" name="date_from" value="{{ filter_date_from }}" />
+
+      <label>{{ 'To Date'|tr:preferred_language }}</label>
+      <input class="form-control" type="date" name="date_to" value="{{ filter_date_to }}" />
+
+      <!-- Price Range -->
+      <label>{{ 'Min Price (₹)'|tr:preferred_language }}</label>
+      <input class="form-control" type="number" name="price_min" value="{{ filter_price_min }}" min="0" placeholder="0" />
+
+      <label>{{ 'Max Price (₹)'|tr:preferred_language }}</label>
+      <input class="form-control" type="number" name="price_max" value="{{ filter_price_max }}" min="0" placeholder="{{ 'Any'|tr:preferred_language }}" />
+
+      <!-- Sort -->
+      <label>{{ 'Sort By'|tr:preferred_language }}</label>
+      <select class="form-select" name="sort">
+        <option value="-start_time" {% if filter_sort == '-start_time' %}selected{% endif %}>{{ 'Newest First'|tr:preferred_language }}</option>
+        <option value="start_time"  {% if filter_sort == 'start_time'  %}selected{% endif %}>{{ 'Oldest First'|tr:preferred_language }}</option>
+        <option value="title"       {% if filter_sort == 'title'       %}selected{% endif %}>{{ 'Title A–Z'|tr:preferred_language }}</option>
+        <option value="-title"      {% if filter_sort == '-title'      %}selected{% endif %}>{{ 'Title Z–A'|tr:preferred_language }}</option>
+        <option value="price"       {% if filter_sort == 'price'       %}selected{% endif %}>{{ 'Price Low–High'|tr:preferred_language }}</option>
+        <option value="-price"      {% if filter_sort == '-price'      %}selected{% endif %}>{{ 'Price High–Low'|tr:preferred_language }}</option>
+        <option value="-created_at" {% if filter_sort == '-created_at' %}selected{% endif %}>{{ 'Recently Added'|tr:preferred_language }}</option>
+      </select>
+    </div>
+
+    <div class="filter-drawer-footer">
+      <button type="submit" class="btn btn-submit btn-sm flex-fill"><i class="bi bi-search me-1"></i>{{ 'Apply'|tr:preferred_language }}</button>
+      <a href="{% url 'event_list' %}" class="btn btn-cancel btn-sm"><i class="bi bi-x-circle me-1"></i>{{ 'Clear'|tr:preferred_language }}</a>
+    </div>
+  </form>
+</div>
+
+<script>
+(function(){
+  var fab = document.getElementById('filterFab');
+  var drawer = document.getElementById('filterDrawer');
+  var closeBtn = document.getElementById('filterDrawerClose');
+  var badge = document.getElementById('filterBadge');
+
+  // Count active filters
+  var activeFilters = [
+    {% if search_query %}1,{% endif %}
+    {% if filter_event_type %}1,{% endif %}
+    {% if filter_category %}1,{% endif %}
+    {% if filter_status %}1,{% endif %}
+    {% if filter_date_from %}1,{% endif %}
+    {% if filter_date_to %}1,{% endif %}
+    {% if filter_price_min %}1,{% endif %}
+    {% if filter_price_max %}1{% endif %}
+  ].length;
+
+  // Recount properly
+  var count = 0;
+  {% if search_query %}count++;{% endif %}
+  {% if filter_event_type %}count++;{% endif %}
+  {% if filter_category %}count++;{% endif %}
+  {% if filter_status %}count++;{% endif %}
+  {% if filter_date_from %}count++;{% endif %}
+  {% if filter_date_to %}count++;{% endif %}
+  {% if filter_price_min %}count++;{% endif %}
+  {% if filter_price_max %}count++;{% endif %}
+
+  if(count > 0){
+    badge.textContent = count;
+    badge.classList.add('visible');
+  }
+
+  fab.addEventListener('click', function(e){
+    e.stopPropagation();
+    drawer.classList.toggle('open');
+  });
+
+  closeBtn.addEventListener('click', function(){
+    drawer.classList.remove('open');
+  });
+
+  document.addEventListener('click', function(e){
+    if(drawer.classList.contains('open') && !drawer.contains(e.target) && e.target !== fab){
+      drawer.classList.remove('open');
+    }
+  });
+
+  // Keyboard close
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') drawer.classList.remove('open');
+  });
+
+  // Sync sidebar collapsed state for FAB positioning
+  var observer = new MutationObserver(function(){
+    var collapsed = document.body.classList.contains('sb-collapsed');
+    fab.style.left = collapsed ? '1.25rem' : 'calc(var(--sw) + 1.25rem)';
+    drawer.style.left = collapsed ? '1.25rem' : 'calc(var(--sw) + 1.25rem)';
+  });
+  observer.observe(document.body, {attributes: true, attributeFilter: ['class']});
+})();
+</script>
 {% endblock %}

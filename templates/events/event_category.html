@@ -2,6 +2,142 @@
 {% load translate_tags %}
 {% block title %}{{ 'Category List'|tr:preferred_language }} — {{ 'Event Registration Platform'|tr:preferred_language }}{% endblock %}
 
+{% block extra_head %}
+<style>
+  /* ── Floating Filter FAB ─────────────────────────────────────── */
+  .filter-fab {
+    position: fixed;
+    bottom: calc(var(--fh) + 1.25rem);
+    left: calc(var(--sw) + 1.25rem);
+    z-index: 1020;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--teal);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(23,162,184,.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    transition: background .15s, transform .15s, box-shadow .15s;
+  }
+  .filter-fab:hover {
+    background: #138496;
+    transform: scale(1.08);
+    box-shadow: 0 6px 22px rgba(23,162,184,.55);
+  }
+  .filter-fab .fab-badge {
+    position: absolute;
+    top: -4px; right: -4px;
+    background: var(--danger);
+    color: #fff;
+    border-radius: 50%;
+    width: 18px; height: 18px;
+    font-size: .65rem;
+    font-weight: 700;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .filter-fab .fab-badge.visible { display: flex; }
+  body.sb-collapsed .filter-fab { left: 1.25rem; }
+
+  /* ── Filter Drawer ────────────────────────────────────────────── */
+  .filter-drawer {
+    position: fixed;
+    bottom: calc(var(--fh) + 4.5rem);
+    left: calc(var(--sw) + 1.25rem);
+    z-index: 1019;
+    width: 290px;
+    max-height: calc(100vh - var(--nh) - var(--fh) - 6rem);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 8px 32px rgba(0,0,0,.18);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: translateY(20px) scale(.97);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform .22s cubic-bezier(.4,0,.2,1), opacity .22s;
+  }
+  .filter-drawer.open {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    pointer-events: auto;
+  }
+  body.sb-collapsed .filter-drawer { left: 1.25rem; }
+
+  .filter-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .7rem 1rem;
+    border-bottom: 1px solid var(--border);
+    font-weight: 700;
+    font-size: .85rem;
+    color: var(--muted);
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .filter-drawer-body {
+    overflow-y: auto;
+    padding: .85rem 1rem;
+    flex: 1;
+  }
+  .filter-drawer-body label {
+    font-size: .76rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: .18rem;
+    display: block;
+  }
+  .filter-drawer-body .form-control,
+  .filter-drawer-body .form-select {
+    font-size: .83rem;
+    padding: .32rem .6rem;
+    margin-bottom: .65rem;
+  }
+  .filter-drawer-footer {
+    display: flex;
+    gap: .5rem;
+    padding: .65rem 1rem;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  /* Active filter chips */
+  .active-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+    margin-bottom: .9rem;
+  }
+  .filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    background: var(--teal-bg);
+    color: var(--teal);
+    border-radius: 20px;
+    padding: .18rem .6rem;
+    font-size: .76rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  @media(max-width:768px){
+    .filter-fab { left: 1.25rem; }
+    .filter-drawer { left: 1.25rem; right: 1.25rem; width: auto; }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
   <h2><i class="bi bi-folder2-open me-2 text-primary"></i>{{ 'Event Category List'|tr:preferred_language }}</h2>
@@ -13,9 +149,22 @@
   </nav>
 </div>
 
+<!-- Active filter chips -->
+{% with has_filter=filter_search|default:filter_status %}
+{% if has_filter %}
+<div class="active-filters">
+  {% if filter_search %}<span class="filter-chip"><i class="bi bi-search"></i> "{{ filter_search }}"</span>{% endif %}
+  {% if filter_status %}<span class="filter-chip"><i class="bi bi-circle-half"></i> {{ filter_status }}</span>{% endif %}
+  <a href="{% url 'event_category' %}" class="filter-chip" style="background:#fee2e2;color:#991b1b;"><i class="bi bi-x-circle"></i> {{ 'Clear all'|tr:preferred_language }}</a>
+</div>
+{% endif %}
+{% endwith %}
+
 <div class="card">
   <div class="card-header-custom">
-    <h5>{{ 'All Categories'|tr:preferred_language }}</h5>
+    <h5>{{ 'All Categories'|tr:preferred_language }}
+      <span class="text-muted fw-normal" style="font-size:.8rem;margin-left:.4rem;">{{ categories|length }} {{ 'result(s)'|tr:preferred_language }}</span>
+    </h5>
     {% if user.is_staff %}
     <a href="{% url 'create_event_category' %}" class="btn btn-primary btn-sm">
       <i class="bi bi-folder-plus me-1"></i>{{ 'Create New Category'|tr:preferred_language }}
@@ -61,4 +210,86 @@
     </table>
   </div>
 </div>
+
+<!-- ── Floating Filter FAB ────────────────────────────────────── -->
+<button class="filter-fab" id="filterFab" title="{{ 'Filters'|tr:preferred_language }}" aria-label="{{ 'Open filters'|tr:preferred_language }}">
+  <i class="bi bi-funnel-fill"></i>
+  <span class="fab-badge" id="filterBadge"></span>
+</button>
+
+<!-- ── Floating Filter Drawer ─────────────────────────────────── -->
+<div class="filter-drawer" id="filterDrawer" role="dialog" aria-label="{{ 'Filters'|tr:preferred_language }}">
+  <div class="filter-drawer-header">
+    <span><i class="bi bi-funnel-fill me-2"></i>{{ 'Filters'|tr:preferred_language }}</span>
+    <button type="button" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--muted);" id="filterDrawerClose" aria-label="Close filters">×</button>
+  </div>
+  <form method="get" action="{% url 'event_category' %}" id="filter-form">
+    <div class="filter-drawer-body">
+      <!-- Search -->
+      <label>{{ 'Search'|tr:preferred_language }}</label>
+      <input class="form-control" type="search" name="q" value="{{ filter_search }}"
+             placeholder="{{ 'Name or code…'|tr:preferred_language }}" />
+
+      <!-- Status (admin only) -->
+      {% if user.is_staff %}
+      <label>{{ 'Status'|tr:preferred_language }}</label>
+      <select class="form-select" name="status">
+        <option value="">{{ 'All Statuses'|tr:preferred_language }}</option>
+        <option value="active"    {% if filter_status == 'active'    %}selected{% endif %}>{{ 'Active'|tr:preferred_language }}</option>
+        <option value="inactive"  {% if filter_status == 'inactive'  %}selected{% endif %}>{{ 'Inactive'|tr:preferred_language }}</option>
+        <option value="completed" {% if filter_status == 'completed' %}selected{% endif %}>{{ 'Completed'|tr:preferred_language }}</option>
+      </select>
+      {% endif %}
+
+      <!-- Sort -->
+      <label>{{ 'Sort By'|tr:preferred_language }}</label>
+      <select class="form-select" name="sort">
+        <option value="priority" {% if filter_sort == 'priority' %}selected{% endif %}>{{ 'Priority'|tr:preferred_language }}</option>
+        <option value="name"     {% if filter_sort == 'name'     %}selected{% endif %}>{{ 'Name A–Z'|tr:preferred_language }}</option>
+        <option value="-name"    {% if filter_sort == '-name'    %}selected{% endif %}>{{ 'Name Z–A'|tr:preferred_language }}</option>
+        <option value="-created_at" {% if filter_sort == '-created_at' %}selected{% endif %}>{{ 'Recently Added'|tr:preferred_language }}</option>
+      </select>
+    </div>
+
+    <div class="filter-drawer-footer">
+      <button type="submit" class="btn btn-submit btn-sm flex-fill"><i class="bi bi-search me-1"></i>{{ 'Apply'|tr:preferred_language }}</button>
+      <a href="{% url 'event_category' %}" class="btn btn-cancel btn-sm"><i class="bi bi-x-circle me-1"></i>{{ 'Clear'|tr:preferred_language }}</a>
+    </div>
+  </form>
+</div>
+
+<script>
+(function(){
+  var fab = document.getElementById('filterFab');
+  var drawer = document.getElementById('filterDrawer');
+  var closeBtn = document.getElementById('filterDrawerClose');
+  var badge = document.getElementById('filterBadge');
+
+  var count = 0;
+  {% if filter_search %}count++;{% endif %}
+  {% if filter_status %}count++;{% endif %}
+  if(count > 0){ badge.textContent = count; badge.classList.add('visible'); }
+
+  fab.addEventListener('click', function(e){
+    e.stopPropagation();
+    drawer.classList.toggle('open');
+  });
+  closeBtn.addEventListener('click', function(){ drawer.classList.remove('open'); });
+  document.addEventListener('click', function(e){
+    if(drawer.classList.contains('open') && !drawer.contains(e.target) && e.target !== fab){
+      drawer.classList.remove('open');
+    }
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') drawer.classList.remove('open');
+  });
+
+  var observer = new MutationObserver(function(){
+    var collapsed = document.body.classList.contains('sb-collapsed');
+    fab.style.left = collapsed ? '1.25rem' : 'calc(var(--sw) + 1.25rem)';
+    drawer.style.left = collapsed ? '1.25rem' : 'calc(var(--sw) + 1.25rem)';
+  });
+  observer.observe(document.body, {attributes: true, attributeFilter: ['class']});
+})();
+</script>
 {% endblock %}
