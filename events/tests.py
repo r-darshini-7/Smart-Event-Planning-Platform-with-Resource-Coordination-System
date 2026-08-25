@@ -98,6 +98,40 @@ class RegistrationPdfTests(TestCase):
 
 
 class EventRegistrationFormTests(TestCase):
+    def test_student_registration_requires_and_accepts_student_details(self):
+        base = {
+            'first_name': 'Asha', 'email': 'asha@example.com', 'role': 'student',
+        }
+        form = EventRegistrationForm(data=base)
+        self.assertFalse(form.is_valid())
+        self.assertIn('college id', ' '.join(form.non_field_errors()))
+
+        base.update({
+            'college_id': 'C-10', 'college_name': 'City College', 'domain': 'engineering',
+            'course': 'bca', 'course_specialization': 'Data', 'graduating_year': '2027',
+            'year_of_study': '2',
+        })
+        self.assertTrue(EventRegistrationForm(data=base).is_valid())
+
+    def test_working_employee_registration_requires_employee_details(self):
+        data = {
+            'first_name': 'Ravi', 'email': 'ravi@example.com', 'role': 'working_professional',
+            'employee_id': 'E-10', 'company_name': 'Acme', 'job_role': 'Engineer',
+            'experience': 'Backend development', 'years_of_experience': '3.5',
+        }
+        form = EventRegistrationForm(data=data)
+        self.assertTrue(form.is_valid())
+
+    def test_team_member_details_are_collected_without_team_size(self):
+        data = {
+            'first_name': 'Asha', 'email': 'asha@example.com', 'role': 'other', 'other_role': 'Volunteer',
+            'team_member_1_first_name': 'Ravi', 'team_member_1_email': 'ravi@example.com',
+            'team_member_1_role': 'other', 'team_member_1_other_role': 'Guest',
+        }
+        form = EventRegistrationForm(data=data)
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.cleaned_data['team_members'][0]['first_name'], 'Ravi')
+
     def test_paid_event_registration_form_requires_payment_fields(self):
         event = Event(price=Decimal('100.00'))
         form = EventRegistrationForm(event=event)
@@ -137,3 +171,78 @@ class EventRegistrationFormTests(TestCase):
         registration_form = EventRegistrationForm()
         self.assertEqual(registration_form.fields['gender'].choices[0], ('', '---------'))
         self.assertEqual(registration_form.fields['role'].choices[0], ('', '---------'))
+
+
+class EventonAssistantTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='assistant-user', email='assistant@example.com', password='pass'
+        )
+        self.client.force_login(self.user)
+
+    def test_assistant_answers_eventon_questions(self):
+        response = self.client.post(
+            reverse('api_chatbot'),
+            data='{"message":"How do I register for an event?"}',
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('register', response.json()['reply'].lower())
+
+    def test_assistant_refuses_unrelated_questions(self):
+        response = self.client.post(
+            reverse('api_chatbot'),
+            data='{"message":"Can you give me a study plan?"}',
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('only answer questions about eventon', response.json()['reply'].lower())
+
+    def test_assistant_uses_current_event_page_for_short_event_questions(self):
+        event = Event.objects.create(
+            uid='evt-hr', title='HR', status='live',
+            start_time=timezone.now(), end_time=timezone.now() + timedelta(hours=1),
+        )
+        response = self.client.post(
+            reverse('api_chatbot'),
+            data='{"message":"hr event", "page_url":"/register-event/%s/"}' % event.pk,
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('**HR**', response.json()['reply'])
+
+    def test_assistant_does_not_map_named_event_to_current_page(self):
+        current_event = Event.objects.create(
+            uid='evt-hack', title='Hack', status='live',
+            start_time=timezone.now(), end_time=timezone.now() + timedelta(hours=1),
+        )
+        Event.objects.create(
+            uid='evt-hr', title='HR', status='live',
+            start_time=timezone.now(), end_time=timezone.now() + timedelta(hours=1),
+        )
+        response = self.client.post(
+            reverse('api_chatbot'),
+            data='{"message":"hr event", "page_url":"/register-event/%s/"}' % current_event.pk,
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('**HR**', response.json()['reply'])
+        self.assertNotIn('**Hack**', response.json()['reply'])
+
+    def test_assistant_uses_current_category_page_for_category_questions(self):
+        Event.objects.create(
+            uid='evt-seminar', title='Leadership Seminar', event_type='seminars', status='live',
+            start_time=timezone.now(), end_time=timezone.now() + timedelta(hours=1),
+        )
+        response = self.client.post(
+            reverse('api_chatbot'),
+            data='{"message":"seminars", "page_url":"/events/type/seminars/"}',
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('Leadership Seminar', response.json()['reply'])

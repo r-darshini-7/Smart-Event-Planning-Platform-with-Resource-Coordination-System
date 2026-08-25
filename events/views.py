@@ -737,17 +737,34 @@ def register_event(request, pk):
             profile = getattr(user, 'profile', None)
             if profile:
                 profile.phone = form.cleaned_data['phone']
+                profile.location = form.cleaned_data.get('location', '')
                 profile.save()
 
             registration_data = {
+                'first_name': form.cleaned_data.get('first_name'),
+                'last_name': form.cleaned_data.get('last_name'),
+                'email': form.cleaned_data.get('email'),
+                'phone': form.cleaned_data.get('phone'),
+                'location': form.cleaned_data.get('location'),
                 'gender': form.cleaned_data.get('gender'),
                 'role': form.cleaned_data.get('role'),
+                'other_role': form.cleaned_data.get('other_role'),
+                'team_name': form.cleaned_data.get('team_name'),
+                'college_id': form.cleaned_data.get('college_id'),
                 'college_name': form.cleaned_data.get('college_name'),
+                'domain': form.cleaned_data.get('domain'),
+                'course': form.cleaned_data.get('course'),
+                'other_course': form.cleaned_data.get('other_course'),
+                'course_specialization': form.cleaned_data.get('course_specialization'),
                 'year_of_study': form.cleaned_data.get('year_of_study'),
-                'year_of_passing': form.cleaned_data.get('year_of_passing'),
+                'graduating_year': form.cleaned_data.get('graduating_year'),
+                'employee_id': form.cleaned_data.get('employee_id'),
                 'company_name': form.cleaned_data.get('company_name'),
+                'job_role': form.cleaned_data.get('job_role') or form.cleaned_data.get('job_title'),
                 'job_title': form.cleaned_data.get('job_title'),
-                'industry': form.cleaned_data.get('industry'),
+                'experience': form.cleaned_data.get('experience'),
+                'years_of_experience': form.cleaned_data.get('years_of_experience'),
+                'team_members': form.cleaned_data.get('team_members', []),
                 'payment_amount': str(event.price),
                 'payment_mode': form.cleaned_data.get('payment_mode'),
                 'other_payment_mode': form.cleaned_data.get('other_payment_mode'),
@@ -2716,19 +2733,42 @@ def api_calendar_events(request):
 
 
 # ── API: Eventon Chatbot ───────────────────────
-def _chatbot_event_reply(request, user_message):
+def _chatbot_event_reply(request, user_message, page_path=''):
     """Answer common Eventon questions using the current user's site data."""
     question = user_message.lower()
     is_admin = request.user.is_staff or getattr(getattr(request.user, 'profile', None), 'is_organizer', False)
 
     events = Event.objects.select_related('category', 'venue').all()
+    type_match = re.search(r'/events/type/([^/]+)/', page_path or '')
+    page_event_type = type_match.group(1) if type_match else ''
+    page_event_type_label = dict(Event.EVENT_TYPE_CHOICES).get(page_event_type, page_event_type)
     event = events.filter(Q(title__iexact=user_message) | Q(uid__iexact=user_message)).first()
     if not event:
-        event_terms = [term for term in user_message.split() if len(term) > 2]
+        event_terms = [term for term in user_message.split() if len(term) >= 2 and term.lower() not in {'event', 'the', 'for'}]
         if event_terms:
             event = events.filter(
                 *[Q(title__icontains=term) | Q(uid__icontains=term) for term in event_terms]
             ).first()
+    if not event and re.search(r'\b(this|current|here|above)\s+event\b|\b(event|registration)\s+(page|details)\b', question):
+        page_match = re.search(r'/(?:event-detail|register-event)/(\d+)/', page_path or '')
+        if page_match:
+            event = events.filter(pk=page_match.group(1)).first()
+
+    if not event and page_event_type and (
+        page_event_type_label.lower() in question
+        or page_event_type.replace('_', ' ') in question
+        or re.search(r'\b(list|available|upcoming|show|what)\b', question)
+    ):
+        category_events = events.filter(event_type=page_event_type).order_by('start_time')
+        if not category_events.exists():
+            return f"There are no events listed under **{page_event_type_label}** right now."
+        reply = f"**{page_event_type_label} events**\n"
+        for category_event in category_events[:10]:
+            event_date = timezone.localtime(category_event.start_time).strftime('%d %b %Y, %I:%M %p')
+            reply += f"- **{category_event.title}** — {event_date} — /event-detail/{category_event.pk}/\n"
+        if category_events.count() > 10:
+            reply += f"Showing 10 of {category_events.count()} events."
+        return reply.rstrip()
 
     asks_for_details = any(word in question for word in (
         'detail', 'about', 'information', 'info', 'when', 'where', 'venue',
@@ -2785,7 +2825,7 @@ def _chatbot_event_reply(request, user_message):
             f"You are using Eventon in **{role} mode**. Ask me about an event name, "
             "how to register, event details, or how to create an event/category."
         )
-    return "I can answer questions about Eventon events, event details, registration, categories, and admin workflows."
+    return "I can only answer questions about Eventon events, event details, registration, categories, and admin workflows."
 
 
 @csrf_exempt
@@ -2803,7 +2843,8 @@ def api_chatbot(request):
     if not user_message:
         return _json_response({'error': 'message is required'}, 400)
 
-    local_reply = _chatbot_event_reply(request, user_message)
+    page_path = (payload.get('page_url') or '').strip()
+    local_reply = _chatbot_event_reply(request, user_message, page_path=page_path)
     if local_reply:
         return _json_response({'reply': local_reply})
 

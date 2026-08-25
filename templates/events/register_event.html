@@ -3,6 +3,19 @@
 {% block title %}{{ 'Register for'|tr:preferred_language }} {{ event.title }}{% endblock %}
 
 {% block content %}
+<style>
+  .registration-form .row {
+    display: block;
+    margin-left: 0;
+    margin-right: 0;
+  }
+  .registration-form .row > [class*="col-"] {
+    width: 100%;
+    max-width: 100%;
+    padding-left: 0;
+    padding-right: 0;
+  }
+</style>
 <div class="page-header">
   <h2><i class="bi bi-pencil-square me-2 text-primary"></i>{{ 'Register for Event'|tr:preferred_language }}</h2>
   <nav aria-label="breadcrumb">
@@ -19,7 +32,7 @@
     <h5 class="card-title mb-3">{{ event.title }}</h5>
     <p class="text-muted mb-4">{{ event.category.name|default:event.get_event_type_display }}</p>
 
-    <form method="post">
+    <form method="post" class="registration-form">
       {% csrf_token %}
       <div class="mb-3">
         {{ form.first_name.label_tag }}
@@ -42,6 +55,11 @@
         {{ form.phone.errors }}
       </div>
       <div class="mb-3">
+        {{ form.location.label_tag }}
+        {{ form.location }}
+        {{ form.location.errors }}
+      </div>
+      <div class="mb-3">
         {{ form.gender.label_tag }}
         {{ form.gender }}
         {{ form.gender.errors }}
@@ -51,40 +69,43 @@
         {{ form.role }}
         {{ form.role.errors }}
       </div>
-      <div id="student-fields" class="mb-3 d-none">
-        <div class="mb-3">
-          {{ form.college_name.label_tag }}
-          {{ form.college_name }}
-          {{ form.college_name.errors }}
-        </div>
-        <div class="mb-3">
-          {{ form.year_of_study.label_tag }}
-          {{ form.year_of_study }}
-          {{ form.year_of_study.errors }}
-        </div>
-        <div class="mb-3">
-          {{ form.year_of_passing.label_tag }}
-          {{ form.year_of_passing }}
-          {{ form.year_of_passing.errors }}
+      <div class="mb-3">
+        {{ form.other_role.label_tag }}
+        {{ form.other_role }}
+        {{ form.other_role.errors }}
+      </div>
+      <div class="mb-3">
+        {{ form.team_name.label_tag }}
+        {{ form.team_name }}
+        {{ form.team_name.errors }}
+      </div>
+      <div id="leader-student-fields" class="mb-3 d-none">
+        <div class="row">
+          <div class="col-md-6 mb-3">{{ form.college_id.label_tag }}{{ form.college_id }}{{ form.college_id.errors }}</div>
+          <div class="col-md-6 mb-3">{{ form.college_name.label_tag }}{{ form.college_name }}{{ form.college_name.errors }}</div>
+          <div class="col-md-6 mb-3">{{ form.domain.label_tag }}{{ form.domain }}{{ form.domain.errors }}</div>
+          <div class="col-md-6 mb-3">{{ form.course.label_tag }}{{ form.course }}{{ form.course.errors }}</div>
+          <div id="leader-other-course-wrap" class="col-md-6 mb-3 d-none">{{ form.other_course.label_tag }}{{ form.other_course }}{{ form.other_course.errors }}</div>
+          <div class="col-md-6 mb-3">{{ form.course_specialization.label_tag }}{{ form.course_specialization }}{{ form.course_specialization.errors }}</div>
+          <div class="col-md-6 mb-3">{{ form.graduating_year.label_tag }}{{ form.graduating_year }}{{ form.graduating_year.errors }}</div>
+          <div class="col-md-6 mb-3">{{ form.year_of_study.label_tag }}{{ form.year_of_study }}{{ form.year_of_study.errors }}</div>
         </div>
       </div>
-      <div id="professional-fields" class="mb-3 d-none">
-        <div class="mb-3">
-          {{ form.company_name.label_tag }}
-          {{ form.company_name }}
-          {{ form.company_name.errors }}
-        </div>
-        <div class="mb-3">
-          {{ form.job_title.label_tag }}
-          {{ form.job_title }}
-          {{ form.job_title.errors }}
-        </div>
-        <div class="mb-3">
-          {{ form.industry.label_tag }}
-          {{ form.industry }}
-          {{ form.industry.errors }}
+      <div id="leader-professional-fields" class="mb-3 d-none">
+        <div class="row">
+          <div class="col-md-6 mb-3">{{ form.employee_id.label_tag }}{{ form.employee_id }}{{ form.employee_id.errors }}</div>
+          <div class="col-md-6 mb-3">{{ form.company_name.label_tag }}{{ form.company_name }}{{ form.company_name.errors }}</div>
+          <div class="col-md-6 mb-3">{{ form.job_role.label_tag }}{{ form.job_role }}{{ form.job_role.errors }}</div>
+          <div class="col-md-6 mb-3">{{ form.experience.label_tag }}{{ form.experience }}{{ form.experience.errors }}</div>
+          <div class="col-md-6 mb-3">{{ form.years_of_experience.label_tag }}{{ form.years_of_experience }}{{ form.years_of_experience.errors }}</div>
         </div>
       </div>
+      <div id="team-members-controls" class="mb-3">
+        <button type="button" id="add-team-member" class="btn btn-outline-primary">
+          <i class="bi bi-person-plus me-1"></i>Add Member
+        </button>
+      </div>
+      <div id="team-members" class="mb-3"></div>
       {% if show_payment_fields %}
       <div class="alert alert-info">
         <div class="fw-semibold">Amount to pay: ₹{{ event.price }}</div>
@@ -121,20 +142,21 @@
 
 {% block extra_scripts %}
 <script>
+  const roleOptions = '<option value="">Select working status</option><option value="student">Student</option><option value="working_professional">Working Employee</option><option value="other">Others</option>';
+  const genderOptions = '<option value="">Select gender</option><option value="female">Female</option><option value="male">Male</option><option value="prefer_not_to_say">Prefer not to say</option>';
+  const domainOptions = '<option value="">Select domain</option><option value="management">Management</option><option value="engineering">Engineering</option><option value="art_science">Art & Science</option><option value="medicine">Medicine</option><option value="law">Law</option>';
+  const courseOptions = '<option value="">Select course</option><option value="mtech_me">M.Tech/ME</option><option value="integrated_dual_degree">Integrated/Dual Degree</option><option value="bca">BCA</option><option value="mca">MCA</option><option value="phd">PhD</option><option value="diploma">Diploma</option><option value="other">Others</option>';
+
+  function toggleRoleFields(role, student, professional, other) {
+    student.classList.toggle('d-none', role !== 'student');
+    professional.classList.toggle('d-none', role !== 'working_professional');
+    if (other) other.classList.toggle('d-none', role !== 'other');
+  }
   function updateRoleFields() {
     const role = document.getElementById('id_role').value;
-    const student = document.getElementById('student-fields');
-    const professional = document.getElementById('professional-fields');
-    if (role === 'student') {
-      student.classList.remove('d-none');
-      professional.classList.add('d-none');
-    } else if (role === 'working_professional') {
-      professional.classList.remove('d-none');
-      student.classList.add('d-none');
-    } else {
-      student.classList.add('d-none');
-      professional.classList.add('d-none');
-    }
+    toggleRoleFields(role, document.getElementById('leader-student-fields'), document.getElementById('leader-professional-fields'), document.getElementById('id_other_role').parentElement);
+    const course = document.getElementById('id_course');
+    document.getElementById('leader-other-course-wrap').classList.toggle('d-none', course.value !== 'other');
   }
   function updatePaymentFields() {
     const paymentMode = document.getElementById('id_payment_mode');
@@ -142,14 +164,58 @@
     if (!paymentMode || !otherWrap) return;
     otherWrap.style.display = paymentMode.value === 'other' ? 'block' : 'none';
   }
+  function addTeamMember() {
+    const container = document.getElementById('team-members');
+    const index = container.querySelectorAll('.team-member-card').length + 1;
+    const card = document.createElement('div');
+    card.className = 'team-member-card border rounded p-3 mb-3';
+    card.innerHTML = `
+      <div class="fw-semibold mb-3">Team member ${index}</div>
+      <div class="row">
+        <div class="col-md-6 mb-3"><label class="form-label">First Name *</label><input type="text" name="team_member_${index}_first_name" class="form-control" required></div>
+        <div class="col-md-6 mb-3"><label class="form-label">Last Name</label><input type="text" name="team_member_${index}_last_name" class="form-control"></div>
+        <div class="col-md-6 mb-3"><label class="form-label">Email</label><input type="email" name="team_member_${index}_email" class="form-control"></div>
+        <div class="col-md-6 mb-3"><label class="form-label">Phone Number</label><input type="text" name="team_member_${index}_phone" class="form-control"></div>
+        <div class="col-md-6 mb-3"><label class="form-label">Gender</label><select name="team_member_${index}_gender" class="form-select">${genderOptions}</select></div>
+        <div class="col-md-6 mb-3"><label class="form-label">Location</label><input type="text" name="team_member_${index}_location" class="form-control"></div>
+        <div class="col-md-6 mb-3"><label class="form-label">Working Professional</label><select class="form-select member-role" name="team_member_${index}_role">${roleOptions}</select></div>
+        <div class="col-md-6 mb-3 member-other-role d-none"><label class="form-label">Others</label><input type="text" name="team_member_${index}_other_role" class="form-control"></div>
+      </div>
+      <div class="member-student-fields d-none"><div class="row">
+        <div class="col-md-6 mb-3"><label class="form-label">College ID</label><input type="text" name="team_member_${index}_college_id" class="form-control"></div>
+        <div class="col-md-6 mb-3"><label class="form-label">College Name</label><input type="text" name="team_member_${index}_college_name" class="form-control"></div>
+        <div class="col-md-6 mb-3"><label class="form-label">Domain</label><select name="team_member_${index}_domain" class="form-select">${domainOptions}</select></div>
+        <div class="col-md-6 mb-3"><label class="form-label">Course</label><select class="member-course form-select" name="team_member_${index}_course">${courseOptions}</select></div>
+        <div class="col-md-6 mb-3 member-other-course d-none"><label class="form-label">Others</label><input type="text" name="team_member_${index}_other_course" class="form-control"></div>
+        <div class="col-md-6 mb-3"><label class="form-label">Course Specialization</label><input type="text" name="team_member_${index}_course_specialization" class="form-control"></div>
+        <div class="col-md-6 mb-3"><label class="form-label">Graduating Year</label><input type="number" name="team_member_${index}_graduating_year" class="form-control"></div>
+        <div class="col-md-6 mb-3"><label class="form-label">Year of Study</label><select name="team_member_${index}_year_of_study" class="form-select"><option value="">Select year</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+      </div></div>
+      <div class="member-professional-fields d-none"><div class="row">
+        <div class="col-md-6 mb-3"><label class="form-label">Emp ID</label><input type="text" name="team_member_${index}_employee_id" class="form-control"></div>
+        <div class="col-md-6 mb-3"><label class="form-label">Company Name</label><input type="text" name="team_member_${index}_company_name" class="form-control"></div>
+        <div class="col-md-6 mb-3"><label class="form-label">Job Role</label><input type="text" name="team_member_${index}_job_role" class="form-control"></div>
+        <div class="col-md-6 mb-3"><label class="form-label">Experience</label><input type="text" name="team_member_${index}_experience" class="form-control"></div>
+        <div class="col-md-6 mb-3"><label class="form-label">Years of Experience</label><input type="number" step="0.1" name="team_member_${index}_years_of_experience" class="form-control"></div>
+      </div></div>`;
+    container.appendChild(card);
+    card.querySelector('.member-role').addEventListener('change', function() {
+      toggleRoleFields(this.value, card.querySelector('.member-student-fields'), card.querySelector('.member-professional-fields'), card.querySelector('.member-other-role'));
+    });
+    card.querySelector('.member-course').addEventListener('change', function() {
+      card.querySelector('.member-other-course').classList.toggle('d-none', this.value !== 'other');
+    });
+  }
   document.addEventListener('DOMContentLoaded', function() {
     updateRoleFields();
     updatePaymentFields();
     document.getElementById('id_role').addEventListener('change', updateRoleFields);
+    document.getElementById('id_course').addEventListener('change', updateRoleFields);
     const paymentMode = document.getElementById('id_payment_mode');
     if (paymentMode) {
       paymentMode.addEventListener('change', updatePaymentFields);
     }
+    document.getElementById('add-team-member').addEventListener('click', addTeamMember);
   });
 </script>
 {% endblock %}

@@ -1,4 +1,5 @@
 from decimal import Decimal
+import re
 
 from django import forms
 from django.contrib.auth.models import User
@@ -301,6 +302,22 @@ class EventRegistrationForm(forms.Form):
         ('working_professional', 'Working Professional'),
         ('other', 'Other'),
     ]
+    DOMAIN_CHOICES = [
+        ('management', 'Management'),
+        ('engineering', 'Engineering'),
+        ('art_science', 'Art & Science'),
+        ('medicine', 'Medicine'),
+        ('law', 'Law'),
+    ]
+    COURSE_CHOICES = [
+        ('mtech_me', 'M.Tech/ME'),
+        ('integrated_dual_degree', 'Integrated/Dual Degree'),
+        ('bca', 'BCA'),
+        ('mca', 'MCA'),
+        ('phd', 'PhD'),
+        ('diploma', 'Diploma'),
+        ('other', 'Others'),
+    ]
     GENDER_CHOICES = [
         ('male', 'Male'),
         ('female', 'Female'),
@@ -324,8 +341,12 @@ class EventRegistrationForm(forms.Form):
         })
     )
     phone = forms.CharField(
-        required=True,
+        required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Phone Number'})
+    )
+    location = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Location'})
     )
     gender = forms.ChoiceField(
         required=False,
@@ -337,17 +358,72 @@ class EventRegistrationForm(forms.Form):
         choices=ROLE_CHOICES,
         widget=forms.Select(attrs={'class': 'form-select'})
     )
+    other_role = forms.CharField(
+        required=False,
+        label='Others',
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Specify your role'})
+    )
+    team_name = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Team Name'})
+    )
     college_name = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'College Name'})
     )
+    college_id = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'College ID'})
+    )
     year_of_study = forms.CharField(
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Year of Study'})
+        widget=forms.Select(choices=[('', 'Select year')] + [(str(year), str(year)) for year in range(1, 6)], attrs={'class': 'form-select'})
     )
+    graduating_year = forms.IntegerField(
+        required=False,
+        min_value=1900,
+        max_value=2200,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Graduating Year'})
+    )
+    domain = forms.ChoiceField(
+        required=False,
+        choices=DOMAIN_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    course = forms.ChoiceField(
+        required=False,
+        choices=COURSE_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    other_course = forms.CharField(
+        required=False,
+        label='Others',
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Specify your course'})
+    )
+    course_specialization = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Course Specialization'})
+    )
+    employee_id = forms.CharField(
+        required=False,
+        label='Emp ID',
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Employee ID'})
+    )
+    experience = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Experience'})
+    )
+    years_of_experience = forms.DecimalField(
+        required=False,
+        min_value=0,
+        max_digits=4,
+        decimal_places=1,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.1', 'placeholder': 'Years of Experience'})
+    )
+    # Kept for compatibility with older saved registration snapshots.
     year_of_passing = forms.CharField(
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Year of Passing'})
+        widget=forms.HiddenInput()
     )
     company_name = forms.CharField(
         required=False,
@@ -356,6 +432,11 @@ class EventRegistrationForm(forms.Form):
     job_title = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Job Title'})
+    )
+    job_role = forms.CharField(
+        required=False,
+        label='Job Role',
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Job Role'})
     )
     industry = forms.CharField(
         required=False,
@@ -401,10 +482,34 @@ class EventRegistrationForm(forms.Form):
             profile = getattr(user, 'profile', None)
             if profile:
                 self.fields['phone'].initial = profile.phone
+                self.fields['location'].initial = profile.location
 
     def clean(self):
         cleaned = super().clean()
         role = cleaned.get('role')
+        team_members = []
+        member_indexes = sorted({
+            int(match.group(1))
+            for key in self.data
+            for match in [re.match(r'team_member_(\d+)_', key)]
+            if match
+        })
+        member_fields = [
+            'first_name', 'last_name', 'email', 'phone', 'gender', 'location',
+            'role', 'other_role', 'college_id', 'college_name', 'domain', 'course',
+            'other_course', 'course_specialization', 'graduating_year', 'year_of_study',
+            'employee_id', 'company_name', 'job_role', 'experience', 'years_of_experience',
+        ]
+        for index in member_indexes:
+            prefix = f'team_member_{index}_'
+            member = {field_name: self.data.get(f'{prefix}{field_name}', '').strip() for field_name in member_fields}
+            if not member['first_name']:
+                self.add_error(None, f'Team member {index} requires first name.')
+            if member['email'] and '@' not in member['email']:
+                self.add_error(None, f'Team member {index} requires a valid email.')
+            self._validate_role_fields(member, f'Team member {index}')
+            team_members.append(member)
+        cleaned['team_members'] = team_members
         if self.event and self.event.price and Decimal(str(self.event.price)) > Decimal('0.00'):
             if not cleaned.get('payment_mode'):
                 self.add_error('payment_mode', 'Please select a payment mode.')
@@ -413,20 +518,24 @@ class EventRegistrationForm(forms.Form):
             if not cleaned.get('upi_id'):
                 self.add_error('upi_id', 'UPI ID is required for paid events.')
         if role == 'student':
-            if not cleaned.get('college_name'):
-                self.add_error('college_name', 'College name is required for students.')
-            if not cleaned.get('year_of_study'):
-                self.add_error('year_of_study', 'Year of study is required for students.')
-            if not cleaned.get('year_of_passing'):
-                self.add_error('year_of_passing', 'Year of passing is required for students.')
+            self._validate_role_fields(cleaned, 'Registration')
         elif role == 'working_professional':
-            if not cleaned.get('company_name'):
-                self.add_error('company_name', 'Company name is required for professionals.')
-            if not cleaned.get('job_title'):
-                self.add_error('job_title', 'Job title is required for professionals.')
-            if not cleaned.get('industry'):
-                self.add_error('industry', 'Industry is required for professionals.')
+            self._validate_role_fields(cleaned, 'Registration')
         return cleaned
+
+    def _validate_role_fields(self, values, label):
+        role = values.get('role')
+        required_fields = {
+            'student': ['college_id', 'college_name', 'domain', 'course', 'course_specialization', 'graduating_year', 'year_of_study'],
+            'working_professional': ['employee_id', 'company_name', 'job_role', 'experience', 'years_of_experience'],
+        }
+        for field_name in required_fields.get(role, []):
+            if not values.get(field_name):
+                self.add_error(None, f'{label} requires {field_name.replace("_", " ")}.')
+        if role == 'other' and not values.get('other_role'):
+            self.add_error(None, f'{label} requires others.')
+        if role == 'student' and values.get('course') == 'other' and not values.get('other_course'):
+            self.add_error(None, f'{label} requires other course.')
 
 
 class UpdateMemberStatusForm(forms.ModelForm):

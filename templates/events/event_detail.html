@@ -24,6 +24,16 @@
     <style>
       .full-event-card { background: #ffffff; border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 6px 18px rgba(15,40,80,0.06); }
       .register-btn { display:block; width:100%; }
+      .event-detail-heading { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+      .event-share-btn { flex:0 0 auto; width:40px; height:40px; border:1px solid #dbe3ef; border-radius:10px; background:#fff; color:#0b63d6; display:inline-flex; align-items:center; justify-content:center; }
+      .event-share-btn:hover { background:#e6f0ff; }
+      .event-share-wrap { position:relative; flex:0 0 auto; }
+      .event-share-menu { display:none; position:absolute; top:calc(100% + .5rem); right:0; z-index:10; width:190px; padding:.4rem; background:#fff; border:1px solid #dbe3ef; border-radius:10px; box-shadow:0 8px 24px rgba(15,40,80,.14); }
+      .event-share-menu.open { display:block; }
+      .event-share-option { display:flex; align-items:center; gap:.6rem; width:100%; padding:.55rem .65rem; border:0; border-radius:7px; background:transparent; color:#1f2328; text-align:left; text-decoration:none; font-size:.875rem; cursor:pointer; }
+      .event-share-option:hover { background:#f1f5f9; }
+      .event-date-column { width:76px; min-width:76px; text-align:center; }
+      .event-date-marker { width:76px; height:52px; margin:0 auto; border-radius:12px; display:flex; align-items:center; justify-content:center; font-weight:600; }
     </style>
 
     <div class="card mb-4 full-event-card">
@@ -38,7 +48,21 @@
             {% endif %}
           </div>
           <div class="col-12 mb-2">
-            <h2 class="mb-1" style="font-size:1.8rem; line-height:1.1;">{{ event.title }}</h2>
+            <div class="event-detail-heading">
+              <h2 class="mb-1" style="font-size:1.8rem; line-height:1.1;">{{ event.title }}</h2>
+              <div class="event-share-wrap">
+                <button type="button" class="event-share-btn" id="event-share-btn" title="Share event" aria-label="Share event">
+                  <i class="bi bi-share-fill" aria-hidden="true"></i>
+                </button>
+                <div class="event-share-menu" id="event-share-menu" role="menu">
+                  <a class="event-share-option" id="share-whatsapp" href="#" target="_blank" rel="noopener" role="menuitem"><i class="bi bi-whatsapp" aria-hidden="true"></i>WhatsApp</a>
+                  <a class="event-share-option" id="share-sms" href="#" role="menuitem"><i class="bi bi-chat-dots" aria-hidden="true"></i>Messages</a>
+                  <a class="event-share-option" id="share-email" href="#" role="menuitem"><i class="bi bi-envelope" aria-hidden="true"></i>Email</a>
+                  <button type="button" class="event-share-option" id="share-copy" role="menuitem"><i class="bi bi-link-45deg" aria-hidden="true"></i>Copy link</button>
+                  <button type="button" class="event-share-option" id="share-more" role="menuitem"><i class="bi bi-three-dots" aria-hidden="true"></i>More options</button>
+                </div>
+              </div>
+            </div>
             <div class="text-muted small mb-2">{{ event.category.name|default:event.get_event_type_display }}</div>
             <div class="d-flex flex-wrap gap-2 align-items-center">
               <span class="badge bg-light text-dark" style="padding:.45rem .7rem; border-radius:8px;">📍 {{ event.venue_name|default:event.location|default:'—' }}</span>
@@ -47,17 +71,15 @@
           </div>
 
           <div class="col-12 mb-3 d-flex gap-3">
-            <div style="min-width:84px; text-align:center;">
-              <div style="width:64px; height:64px; background:#e6f0ff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:600; color:#0b63d6;">{{ event.start_time|date:"d" }}</div>
+            <div class="event-date-column">
+              <div class="small text-muted mb-1">Start</div>
+              <div class="event-date-marker" style="background:#e6f0ff; color:#0b63d6;">{{ event.start_time|date:"d" }}</div>
               <div class="small text-muted mt-1">{{ event.start_time|date:"M Y" }}</div>
             </div>
-            <div style="min-width:84px; text-align:center;">
-              <div style="width:64px; height:64px; background:#ffeede; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:600; color:#d97706;">{{ event.end_time|date:"d" }}</div>
+            <div class="event-date-column">
+              <div class="small text-muted mb-1">End</div>
+              <div class="event-date-marker" style="background:#ffeede; color:#d97706;">{{ event.end_time|date:"d" }}</div>
               <div class="small text-muted mt-1">{{ event.end_time|date:"M Y" }}</div>
-            </div>
-            <div class="flex-grow-1">
-              <div class="small text-muted">Start: {{ event.start_time|date:"d M Y, H:i" }}</div>
-              <div class="small text-muted">End: &nbsp;&nbsp;{{ event.end_time|date:"d M Y, H:i" }}</div>
             </div>
           </div>
 
@@ -193,6 +215,36 @@
 {% block extra_scripts %}
 <script>
   document.addEventListener('DOMContentLoaded', function() {
+    var shareButton = document.getElementById('event-share-btn');
+    var shareMenu = document.getElementById('event-share-menu');
+    if (shareButton) {
+      shareButton.addEventListener('click', function() {
+        if (shareMenu) shareMenu.classList.toggle('open');
+      });
+    }
+    var shareTitle = '{{ event.title|escapejs }}';
+    var shareUrl = window.location.href;
+    var shareText = shareTitle + ' - ' + shareUrl;
+    var whatsappLink = document.getElementById('share-whatsapp');
+    var smsLink = document.getElementById('share-sms');
+    var emailLink = document.getElementById('share-email');
+    if (whatsappLink) whatsappLink.href = 'https://wa.me/?text=' + encodeURIComponent(shareText);
+    if (smsLink) smsLink.href = 'sms:?&body=' + encodeURIComponent(shareText);
+    if (emailLink) emailLink.href = 'mailto:?subject=' + encodeURIComponent(shareTitle) + '&body=' + encodeURIComponent(shareText);
+    var copyLink = document.getElementById('share-copy');
+    if (copyLink) copyLink.addEventListener('click', function() {
+      if (navigator.clipboard) navigator.clipboard.writeText(shareUrl).then(function() {
+        copyLink.innerHTML = '<i class="bi bi-check2" aria-hidden="true"></i>Link copied';
+      }).catch(function() {});
+    });
+    var moreLink = document.getElementById('share-more');
+    if (moreLink) moreLink.addEventListener('click', function() {
+      if (navigator.share) navigator.share({ title: document.title, text: shareTitle, url: shareUrl }).catch(function() {});
+    });
+    document.addEventListener('click', function(event) {
+      if (shareMenu && !event.target.closest('.event-share-wrap')) shareMenu.classList.remove('open');
+    });
+
     var detailMap = document.getElementById('event-detail-map');
     if (!detailMap || typeof L === 'undefined') return;
 

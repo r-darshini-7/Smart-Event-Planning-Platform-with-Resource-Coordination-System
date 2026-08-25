@@ -186,6 +186,8 @@
       color:var(--text);
       min-height:100vh;
       font-size:1rem;
+      display:flex;
+      flex-direction:column;
     }
 
     .quick-panel.offcanvas.offcanvas-end{
@@ -635,7 +637,7 @@
       margin-top:var(--nh);
       padding:1.75rem;
       padding-bottom:1.5rem;
-      min-height:calc(100vh - var(--nh) - var(--fh));
+      flex:1 0 auto;
       transition:margin-left .25s;
     
     }
@@ -646,6 +648,7 @@
     .site-footer{
       margin-left:var(--sw);
       height:var(--fh);
+      flex-shrink:0;
       background:var(--card);
       border-top:var(--footer-border);
       display:flex;
@@ -1894,7 +1897,7 @@
   .chatbot-input-row button:hover{background:#2563eb;}
   .chatbot-typing{font-size:.78rem;color:var(--muted);padding:0 .75rem .4rem;font-style:italic;}
 </style>
-<button id="eventon-chatbot-btn" title="Ask Eventon AI" onclick="toggleChatbot()">
+<button id="eventon-chatbot-btn" title="Open Eventon Assistant" onclick="toggleChatbot()">
   <i class="bi bi-robot"></i>
 </button>
 <div id="eventon-chatbot-window">
@@ -1903,7 +1906,6 @@
     <button onclick="toggleChatbot()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.1rem;"><i class="bi bi-x-lg"></i></button>
   </div>
   <div class="chatbot-messages" id="chatbot-messages">
-    <div class="chat-bubble bot">Hi! I'm your Eventon assistant. Ask me anything about events — dates, venues, registration, and more!</div>
   </div>
   <div class="chatbot-typing" id="chatbot-typing" style="display:none;">Eventon is typing…</div>
   <div class="chatbot-input-row">
@@ -2083,6 +2085,11 @@
       w.classList.remove('open');
     } else {
       w.classList.add('open');
+      var msgs = document.getElementById('chatbot-messages');
+      if(msgs && !msgs.dataset.welcomeShown){
+        _appendBubble('bot', 'Welcome to Eventon Assistant! I can answer questions about Eventon events, registration, schedules, venues, tickets, QR codes, and certificates.', false);
+        msgs.dataset.welcomeShown = 'true';
+      }
       var inp = document.getElementById('chatbot-input');
       if(inp) inp.focus();
     }
@@ -2133,7 +2140,7 @@
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-      body: JSON.stringify({ message: q })
+      body: JSON.stringify({ message: q, page_url: window.location.pathname })
     })
     .then(function(r){ return r.json(); })
     .then(function(data){
