@@ -11,9 +11,9 @@ DEBUG = True
 ALLOWED_HOSTS = ['*', 'localhost', '127.0.0.1']
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
+    'mongo_apps.MongoAdminConfig',
+    'mongo_apps.MongoAuthConfig',
+    'mongo_apps.MongoContentTypesConfig',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
@@ -55,8 +55,12 @@ WSGI_APPLICATION = 'wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django_mongodb_backend',
+        'NAME': os.environ.get('MONGODB_DB', 'event_management'),
+        'HOST': os.environ.get('MONGODB_URI', 'mongodb://localhost:27017/'),
+        'OPTIONS': {
+            'serverSelectionTimeoutMS': 5000,
+        },
     }
 }
 
@@ -79,7 +83,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = 'mongo_apps.MongoObjectIdAutoField'
 
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
@@ -87,5 +91,5 @@ LOGIN_REDIRECT_URL = '/'
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = 'noreply@eventmanagement.local'
 
-# Google Gemini API Key — replace with your real key
+# Google Gemini API key
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', 'YOUR_GEMINI_API_KEY_HERE')

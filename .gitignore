@@ -6,6 +6,5 @@ __pycache__/
 env/
 venv/
 
-db.sqlite3
 create_event_debug.log
 .tmp_*

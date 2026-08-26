@@ -4,7 +4,7 @@ MongoDB sync layer for Event Management ERP.
 This module provides:
   - A lazy-initialised MongoDB client (no crash when MongoDB is unavailable).
   - Helper functions to upsert/delete Event and Category documents.
-  - Django signal receivers that automatically mirror SQLite → MongoDB
+    - Legacy helpers retained for backwards compatibility
     whenever an Event or Category is saved or deleted.
 
 Configuration (settings.py):

@@ -13,9 +13,9 @@ Backend: Python, Django (MVT)
 
 Frontend: HTML5, CSS3, JavaScript, Bootstrap 5, AdminLTE, Chart.js
 
-Libraries: Pillow, qrcode, asgiref, colorama
+Libraries: Pillow, qrcode, asgiref, colorama, django-mongodb-backend
 
-Database: SQLite / PostgreSQL
+Database: MongoDB
 
 ⚡ Quick Start
 Bash
@@ -28,11 +28,15 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Migrate database & create admin
+# 3. Configure MongoDB (PowerShell example)
+$env:MONGODB_URI = "mongodb://localhost:27017/"
+$env:MONGODB_DB = "event_management"
+
+# 4. Migrate database & create admin
 python manage.py migrate
 python manage.py createsuperuser
 
-# 4. Start server
+# 5. Start server
 python manage.py runserver
 
 Access the app at: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
