@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load translate_tags %}
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
 <div class="page-header"><h2>{{ title }}</h2></div>
@@ -8,8 +9,8 @@
     <div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>
     {% endfor %}
     {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
-    <button type="submit" class="btn-submit">Save</button>
-    <a href="{% url 'venue_booking_list' %}" class="btn-cancel ms-2">Cancel</a>
+    <button type="submit" class="btn-submit">{{ 'Save'|tr:preferred_language }}</button>
+    <a href="{% url 'venue_booking_list' %}" class="btn-cancel ms-2">{{ 'Cancel'|tr:preferred_language }}</a>
   </form>
 </div></div>
 {% endblock %}

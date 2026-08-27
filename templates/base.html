@@ -1096,13 +1096,13 @@
       if(document.getElementById('qr-scanner-modal'))return;
       var h='<div class="qr-scanner-modal" id="qr-scanner-modal" role="dialog" aria-modal="true">'+
         '<div class="qr-scanner-modal-card">'+
-          '<div class="qr-scanner-modal-header"><h5 class="mb-0"><i class="bi bi-upc-scan me-2"></i>Scan QR Code</h5>'+
-            '<button type="button" class="btn-close" id="qr-close-btn" aria-label="Close"></button></div>'+
+          '<div class="qr-scanner-modal-header"><h5 class="mb-0"><i class="bi bi-upc-scan me-2"></i>{{ nav_labels.scan_qr_code|escapejs }}</h5>'+
+            '<button type="button" class="btn-close" id="qr-close-btn" aria-label="{{ nav_labels.cancel|escapejs }}"></button></div>'+
           '<div class="qr-scanner-modal-body">'+
             '<div class="qr-scanner-banner" id="qr-scanner-banner"></div>'+
             '<div class="qr-scanner-toolbar">'+
-              '<select class="form-select form-select-sm" id="qr-camera-select"><option>Loading cameras…</option></select>'+
-              '<button class="btn btn-sm btn-outline-secondary" id="qr-torch-btn" style="display:none" title="Torch"><i class="bi bi-lightbulb"></i></button>'+
+              '<select class="form-select form-select-sm" id="qr-camera-select"><option>{{ nav_labels.loading_cameras|escapejs }}</option></select>'+
+              '<button class="btn btn-sm btn-outline-secondary" id="qr-torch-btn" style="display:none" title="{{ nav_labels.torch|escapejs }}"><i class="bi bi-lightbulb"></i></button>'+
             '</div>'+
             '<div class="qr-scanner-stage" id="qr-scanner-stage">'+
               '<video id="qr-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:block;background:#0f172a;"></video>'+
@@ -1113,7 +1113,7 @@
           '</div>'+
           '<div class="qr-scanner-footer">'+
             '<span class="text-muted small me-auto" id="qr-status-text">Initialising…</span>'+
-            '<button type="button" class="btn btn-outline-secondary btn-sm" id="qr-cancel-btn">Cancel</button>'+
+            '<button type="button" class="btn btn-outline-secondary btn-sm" id="qr-cancel-btn">{{ nav_labels.cancel|escapejs }}</button>'+
           '</div>'+
         '</div></div>'+
         '<div class="qr-scanner-flash" id="qr-scanner-flash"></div>';
@@ -1248,6 +1248,40 @@
       wishlist_header: '{{ nav_labels.wishlist_header|escapejs }}',
       attendance_marks_header: '{{ nav_labels.attendance_marks_header|escapejs }}',
       dashboard: '{{ nav_labels.dashboard|escapejs }}',
+      analytics: '{{ nav_labels.analytics|escapejs }}',
+      scan_qr: '{{ nav_labels.scan_qr|escapejs }}',
+      venue_management: '{{ nav_labels.venue_management|escapejs }}',
+      venues: '{{ nav_labels.venues|escapejs }}',
+      add_venue: '{{ nav_labels.add_venue|escapejs }}',
+      venue_list: '{{ nav_labels.venue_list|escapejs }}',
+      venue_bookings: '{{ nav_labels.venue_bookings|escapejs }}',
+      book_venue: '{{ nav_labels.book_venue|escapejs }}',
+      bookings_list: '{{ nav_labels.bookings_list|escapejs }}',
+      resource_management: '{{ nav_labels.resource_management|escapejs }}',
+      resources: '{{ nav_labels.resources|escapejs }}',
+      add_resource: '{{ nav_labels.add_resource|escapejs }}',
+      resource_list: '{{ nav_labels.resource_list|escapejs }}',
+      allocations: '{{ nav_labels.allocations|escapejs }}',
+      allocate_resource: '{{ nav_labels.allocate_resource|escapejs }}',
+      allocation_list: '{{ nav_labels.allocation_list|escapejs }}',
+      vendor_management: '{{ nav_labels.vendor_management|escapejs }}',
+      vendors: '{{ nav_labels.vendors|escapejs }}',
+      add_vendor: '{{ nav_labels.add_vendor|escapejs }}',
+      vendor_list: '{{ nav_labels.vendor_list|escapejs }}',
+      assignments: '{{ nav_labels.assignments|escapejs }}',
+      assign_vendor: '{{ nav_labels.assign_vendor|escapejs }}',
+      assignment_list: '{{ nav_labels.assignment_list|escapejs }}',
+      sponsors: '{{ nav_labels.sponsors|escapejs }}',
+      add_sponsor: '{{ nav_labels.add_sponsor|escapejs }}',
+      sponsor_list: '{{ nav_labels.sponsor_list|escapejs }}',
+      budget_finance: '{{ nav_labels.budget_finance|escapejs }}',
+      budget: '{{ nav_labels.budget|escapejs }}',
+      add_budget_item: '{{ nav_labels.add_budget_item|escapejs }}',
+      budget_item_list: '{{ nav_labels.budget_item_list|escapejs }}',
+      workflow: '{{ nav_labels.workflow|escapejs }}',
+      approvals: '{{ nav_labels.approvals|escapejs }}',
+      new_request: '{{ nav_labels.new_request|escapejs }}',
+      approvals_list: '{{ nav_labels.approvals_list|escapejs }}',
       home: '{{ "Home"|tr:preferred_language|escapejs }}',
       tech_fest: '{{ "Tech Fest"|tr:preferred_language|escapejs }}',
       cultural: '{{ "Cultural"|tr:preferred_language|escapejs }}',
@@ -1287,7 +1321,7 @@
       /* ── MAIN ─────────────────────────────────── */
       html += hdr(navLabels.main_navigation);
       html += lnk('/','bi-speedometer2',navLabels.dashboard);
-      html += lnk('/analytics/','bi-graph-up-arrow','Analytics');
+      html += lnk('/analytics/','bi-graph-up-arrow',navLabels.analytics);
 
       /* ── EVENT CATEGORY ──────────────────────── */
       html += hdr(navLabels.event_category_header);
@@ -1305,52 +1339,52 @@
       html += hdr(navLabels.members_header);
       html += lnk('/add-event-member/','bi-person-plus-fill',navLabels.add_event_member);
       html += lnk('/join-event-list/','bi-people-fill',navLabels.join_event_list);
-      html += '<a href="#" class="sb-link" onclick="event.preventDefault();openQrScannerModal();"><i class="ico bi bi-upc-scan"></i><span>Scan QR</span></a>';
+      html += '<a href="#" class="sb-link" onclick="event.preventDefault();openQrScannerModal();"><i class="ico bi bi-upc-scan"></i><span>'+navLabels.scan_qr+'</span></a>';
 
       /* ── VENUES ──────────────────────────────── */
-      html += hdr('VENUE MANAGEMENT');
-      html += grp('bi-building','Venues',
-        lnk('/venues/create/','bi-plus-circle-dotted','Add Venue')+
-        lnk('/venues/','bi-list-ul','Venue List'));
-      html += grp('bi-calendar-check','Venue Bookings',
-        lnk('/venue-bookings/create/','bi-plus-circle-dotted','Book Venue')+
-        lnk('/venue-bookings/','bi-list-ul','Bookings List'));
+      html += hdr(navLabels.venue_management);
+      html += grp('bi-building',navLabels.venues,
+        lnk('/venues/create/','bi-plus-circle-dotted',navLabels.add_venue)+
+        lnk('/venues/','bi-list-ul',navLabels.venue_list));
+      html += grp('bi-calendar-check',navLabels.venue_bookings,
+        lnk('/venue-bookings/create/','bi-plus-circle-dotted',navLabels.book_venue)+
+        lnk('/venue-bookings/','bi-list-ul',navLabels.bookings_list));
 
       /* ── RESOURCES ───────────────────────────── */
-      html += hdr('RESOURCE MANAGEMENT');
-      html += grp('bi-box-seam','Resources',
-        lnk('/resources/create/','bi-plus-circle-dotted','Add Resource')+
-        lnk('/resources/','bi-list-ul','Resource List'));
-      html += grp('bi-diagram-3','Allocations',
-        lnk('/resource-allocations/create/','bi-plus-circle-dotted','Allocate Resource')+
-        lnk('/resource-allocations/','bi-list-ul','Allocation List'));
+      html += hdr(navLabels.resource_management);
+      html += grp('bi-box-seam',navLabels.resources,
+        lnk('/resources/create/','bi-plus-circle-dotted',navLabels.add_resource)+
+        lnk('/resources/','bi-list-ul',navLabels.resource_list));
+      html += grp('bi-diagram-3',navLabels.allocations,
+        lnk('/resource-allocations/create/','bi-plus-circle-dotted',navLabels.allocate_resource)+
+        lnk('/resource-allocations/','bi-list-ul',navLabels.allocation_list));
 
       /* ── VENDORS ─────────────────────────────── */
-      html += hdr('VENDOR MANAGEMENT');
-      html += grp('bi-truck','Vendors',
-        lnk('/vendors/create/','bi-plus-circle-dotted','Add Vendor')+
-        lnk('/vendors/','bi-list-ul','Vendor List'));
-      html += grp('bi-person-workspace','Assignments',
-        lnk('/vendor-assignments/create/','bi-plus-circle-dotted','Assign Vendor')+
-        lnk('/vendor-assignments/','bi-list-ul','Assignment List'));
+      html += hdr(navLabels.vendor_management);
+      html += grp('bi-truck',navLabels.vendors,
+        lnk('/vendors/create/','bi-plus-circle-dotted',navLabels.add_vendor)+
+        lnk('/vendors/','bi-list-ul',navLabels.vendor_list));
+      html += grp('bi-person-workspace',navLabels.assignments,
+        lnk('/vendor-assignments/create/','bi-plus-circle-dotted',navLabels.assign_vendor)+
+        lnk('/vendor-assignments/','bi-list-ul',navLabels.assignment_list));
 
       /* ── SPONSORS ────────────────────────────── */
-      html += hdr('SPONSORS');
-      html += grp('bi-award','Sponsors',
-        lnk('/sponsors/create/','bi-plus-circle-dotted','Add Sponsor')+
-        lnk('/sponsors/','bi-list-ul','Sponsor List'));
+      html += hdr(navLabels.sponsors);
+      html += grp('bi-award',navLabels.sponsors,
+        lnk('/sponsors/create/','bi-plus-circle-dotted',navLabels.add_sponsor)+
+        lnk('/sponsors/','bi-list-ul',navLabels.sponsor_list));
 
       /* ── BUDGET ──────────────────────────────── */
-      html += hdr('BUDGET & FINANCE');
-      html += grp('bi-cash-stack','Budget',
-        lnk('/budget/create/','bi-plus-circle-dotted','Add Budget Item')+
-        lnk('/budget/','bi-list-ul','Budget Item List'));
+      html += hdr(navLabels.budget_finance);
+      html += grp('bi-cash-stack',navLabels.budget,
+        lnk('/budget/create/','bi-plus-circle-dotted',navLabels.add_budget_item)+
+        lnk('/budget/','bi-list-ul',navLabels.budget_item_list));
 
       /* ── APPROVALS ───────────────────────────── */
-      html += hdr('WORKFLOW');
-      html += grp('bi-clipboard-check','Approvals',
-        lnk('/approvals/create/','bi-plus-circle-dotted','New Request')+
-        lnk('/approvals/','bi-list-ul','Approvals List'));
+      html += hdr(navLabels.workflow);
+      html += grp('bi-clipboard-check',navLabels.approvals,
+        lnk('/approvals/create/','bi-plus-circle-dotted',navLabels.new_request)+
+        lnk('/approvals/','bi-list-ul',navLabels.approvals_list));
 
       /* ── WISHLIST ────────────────────────────── */
       html += hdr(navLabels.wishlist_header);
@@ -1392,7 +1426,7 @@
     var u=m?m.content:'Admin';
     var searchQuery = new URLSearchParams(window.location.search).get('q') || '';
     var searchForm = '<form class="d-flex align-items-center me-2 ms-3" action="/event-list/" method="get">'+
-        '<input class="form-control form-control-sm" type="search" name="q" placeholder="Search events..." value="'+(searchQuery||'')+'" style="min-width:180px;" />'+
+        '<input class="form-control form-control-sm" type="search" name="q" placeholder="{{ nav_labels.search_events|escapejs }}" value="'+(searchQuery||'')+'" style="min-width:180px;" />'+
       '</form>';
     // Messages, Notifications, Microsoft (shows customizer), and Profile icons
     return '<button class="nb-tog" onclick="sbT()"><i class="bi bi-list"></i></button>'+
@@ -1811,7 +1845,12 @@
     <div id="mini-cal" style="user-select:none;margin-bottom:1rem;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;">
         <button id="cal-prev" class="btn btn-sm btn-outline-secondary" style="padding:.2rem .55rem;"><i class="bi bi-chevron-left"></i></button>
-        <span id="cal-month-label" style="font-weight:700;font-size:.95rem;"></span>
+        <div style="display:flex;align-items:center;gap:.35rem;">
+          <label for="cal-month-select" class="visually-hidden">Month</label>
+          <select id="cal-month-select" class="form-select form-select-sm" aria-label="Select month" title="Select month" style="width:112px;font-weight:700;appearance:auto;cursor:pointer;"></select>
+          <label for="cal-year-select" class="visually-hidden">Year</label>
+          <select id="cal-year-select" class="form-select form-select-sm" aria-label="Select year" title="Select year" style="width:88px;font-weight:700;appearance:auto;cursor:pointer;"></select>
+        </div>
         <button id="cal-next" class="btn btn-sm btn-outline-secondary" style="padding:.2rem .55rem;"><i class="bi bi-chevron-right"></i></button>
       </div>
       <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;">
@@ -1927,9 +1966,31 @@
   function _fmtDate(d){ return d.getFullYear()+'-'+_padZ(d.getMonth()+1)+'-'+_padZ(d.getDate()); }
 
   function _renderCal(year, month){
-    var today = new Date(); today.setHours(0,0,0,0);
     var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    document.getElementById('cal-month-label').textContent = monthNames[month]+' '+year;
+    var monthSelect = document.getElementById('cal-month-select');
+    var yearSelect = document.getElementById('cal-year-select');
+    if(monthSelect){
+      monthSelect.innerHTML = '';
+      monthNames.forEach(function(name, index){
+        var option = document.createElement('option');
+        option.value = index;
+        option.textContent = name;
+        monthSelect.appendChild(option);
+      });
+      monthSelect.value = month;
+    }
+    if(yearSelect){
+      var yearOptions = [];
+      for(var optionYear = 1900; optionYear <= 2100; optionYear++) yearOptions.push(optionYear);
+      yearSelect.innerHTML = '';
+      yearOptions.forEach(function(optionYear){
+        var option = document.createElement('option');
+        option.value = optionYear;
+        option.textContent = optionYear;
+        yearSelect.appendChild(option);
+      });
+      yearSelect.value = year;
+    }
 
     var grid = document.getElementById('cal-grid');
     if(!grid) return;
@@ -1950,22 +2011,16 @@
       cell.style.cssText = 'padding:.25rem;cursor:pointer;border-radius:50%;font-size:.82rem;position:relative;';
 
       var dateStr = _fmtDate(cellDate);
-      var isPast = cellDate < today;
+      var today = new Date(); today.setHours(0,0,0,0);
       var isToday = cellDate.getTime() === today.getTime();
       var hasEvent = _calEventDates.indexOf(dateStr) !== -1;
       var isSelected = _calDate && _fmtDate(_calDate) === dateStr;
 
-      if(isPast){
-        cell.style.color = 'var(--muted)';
-        cell.style.opacity = '0.4';
-        cell.style.cursor = 'not-allowed';
-      } else {
-        cell.style.color = 'var(--text)';
-        cell.addEventListener('click', (function(cd){ return function(){ _selectDate(cd); }; })(new Date(cellDate)));
-        cell.style.transition = 'background .12s';
-        cell.onmouseover = function(){ if(!this.classList.contains('cal-sel')) this.style.background='var(--teal-bg)'; };
-        cell.onmouseout  = function(){ if(!this.classList.contains('cal-sel')) this.style.background=''; };
-      }
+      cell.style.color = 'var(--text)';
+      cell.addEventListener('click', (function(cd){ return function(){ _selectDate(cd); }; })(new Date(cellDate)));
+      cell.style.transition = 'background .12s';
+      cell.onmouseover = function(){ if(!this.classList.contains('cal-sel')) this.style.background='var(--teal-bg)'; };
+      cell.onmouseout  = function(){ if(!this.classList.contains('cal-sel')) this.style.background=''; };
       if(isToday){
         cell.style.fontWeight = '700';
         cell.style.border = '2px solid var(--accent)';
@@ -2058,19 +2113,24 @@
   document.addEventListener('DOMContentLoaded', function(){
     var prev = document.getElementById('cal-prev');
     var next = document.getElementById('cal-next');
+    var monthSelect = document.getElementById('cal-month-select');
+    var yearSelect = document.getElementById('cal-year-select');
     if(prev) prev.addEventListener('click', function(){
       _calMonth--;
       if(_calMonth < 0){ _calMonth=11; _calYear--; }
-      // Don't allow going before current month
-      var today = new Date();
-      if(_calYear < today.getFullYear() || (_calYear === today.getFullYear() && _calMonth < today.getMonth())){
-        _calMonth = today.getMonth(); _calYear = today.getFullYear();
-      }
       _loadCalMonth(_calYear, _calMonth);
     });
     if(next) next.addEventListener('click', function(){
       _calMonth++;
       if(_calMonth > 11){ _calMonth=0; _calYear++; }
+      _loadCalMonth(_calYear, _calMonth);
+    });
+    if(monthSelect) monthSelect.addEventListener('change', function(){
+      _calMonth = parseInt(this.value, 10);
+      _loadCalMonth(_calYear, _calMonth);
+    });
+    if(yearSelect) yearSelect.addEventListener('change', function(){
+      _calYear = parseInt(this.value, 10);
       _loadCalMonth(_calYear, _calMonth);
     });
   });

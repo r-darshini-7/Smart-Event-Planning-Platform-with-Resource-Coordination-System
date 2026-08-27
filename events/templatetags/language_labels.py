@@ -60,4 +60,6 @@ LABELS = {
 @register.simple_tag(takes_context=True)
 def lang_label(context, key):
     language = context.get('preferred_language', 'en')
+    if language in ('kn', 'kn-in'):
+        language = 'en'
     return LABELS.get(key, {}).get(language, LABELS.get(key, {}).get('en', key))

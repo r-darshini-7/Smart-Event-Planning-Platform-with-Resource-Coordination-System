@@ -1,17 +1,18 @@
 {% extends 'base.html' %}
+{% load translate_tags %}
 {% block title %}Approval Requests{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h2><i class="bi bi-clipboard-check me-2 text-primary"></i>Approval Requests</h2>
+  <h2><i class="bi bi-clipboard-check me-2 text-primary"></i>{{ 'Approval Requests'|tr:preferred_language }}</h2>
 </div>
 <div class="card">
   <div class="card-header-custom">
-    <h5>All Requests</h5>
-    <a href="{% url 'approval_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle me-1"></i>New Request</a>
+    <h5>{{ 'All Requests'|tr:preferred_language }}</h5>
+    <a href="{% url 'approval_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle me-1"></i>{{ 'New Request'|tr:preferred_language }}</a>
   </div>
   <div class="p-0">
     <table class="table-custom">
-      <thead><tr><th>#</th><th>Type</th><th>Title</th><th>Requested By</th><th>Event</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+      <thead><tr><th>#</th><th>{{ 'Type'|tr:preferred_language }}</th><th>{{ 'Title'|tr:preferred_language }}</th><th>{{ 'Requested By'|tr:preferred_language }}</th><th>{{ 'Event'|tr:preferred_language }}</th><th>{{ 'Status'|tr:preferred_language }}</th><th>{{ 'Created'|tr:preferred_language }}</th><th>{{ 'Actions'|tr:preferred_language }}</th></tr></thead>
       <tbody>
         {% for a in approvals %}
         <tr>
@@ -27,18 +28,18 @@
             <form method="post" action="{% url 'approval_review' a.pk %}">{% csrf_token %}
               <input type="hidden" name="action" value="approve">
               <textarea name="reviewer_notes" class="form-control form-control-sm mb-1" rows="1" placeholder="Notes…"></textarea>
-              <button class="btn btn-sm btn-success">Approve</button>
+              <button class="btn btn-sm btn-success">{{ 'Approve'|tr:preferred_language }}</button>
             </form>
             <form method="post" action="{% url 'approval_review' a.pk %}" class="mt-1">{% csrf_token %}
               <input type="hidden" name="action" value="reject">
-              <button class="btn btn-sm btn-warning">Reject</button>
+              <button class="btn btn-sm btn-warning">{{ 'Reject'|tr:preferred_language }}</button>
             </form>
             {% else %}
             {{ a.reviewer_notes|default:"—"|truncatechars:40 }}
             {% endif %}
           </td>
         </tr>
-        {% empty %}<tr><td colspan="8" class="text-center text-muted py-3">No requests.</td></tr>{% endfor %}
+        {% empty %}<tr><td colspan="8" class="text-center text-muted py-3">{{ 'No requests.'|tr:preferred_language }}</td></tr>{% endfor %}
       </tbody>
     </table>
   </div>

@@ -1,17 +1,18 @@
 {% extends 'base.html' %}
+{% load translate_tags %}
 {% block title %}Vendor Assignments{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h2><i class="bi bi-person-workspace me-2 text-primary"></i>Vendor Assignments</h2>
+  <h2><i class="bi bi-person-workspace me-2 text-primary"></i>{{ 'Vendor Assignments'|tr:preferred_language }}</h2>
 </div>
 <div class="card">
   <div class="card-header-custom">
-    <h5>Assignments</h5>
-    <a href="{% url 'vendor_assignment_create' %}" class="btn btn-success btn-sm"><i class="bi bi-plus-circle me-1"></i>Assign Vendor</a>
+    <h5>{{ 'Assignments'|tr:preferred_language }}</h5>
+    <a href="{% url 'vendor_assignment_create' %}" class="btn btn-success btn-sm"><i class="bi bi-plus-circle me-1"></i>{{ 'Assign Vendor'|tr:preferred_language }}</a>
   </div>
   <div class="p-0">
     <table class="table-custom">
-      <thead><tr><th>#</th><th>Vendor</th><th>Event</th><th>Amount</th><th>Deadline</th><th>Quality</th><th>Status</th><th>Actions</th></tr></thead>
+      <thead><tr><th>#</th><th>{{ 'Vendor'|tr:preferred_language }}</th><th>{{ 'Event'|tr:preferred_language }}</th><th>{{ 'Amount'|tr:preferred_language }}</th><th>{{ 'Deadline'|tr:preferred_language }}</th><th>{{ 'Quality'|tr:preferred_language }}</th><th>{{ 'Status'|tr:preferred_language }}</th><th>{{ 'Actions'|tr:preferred_language }}</th></tr></thead>
       <tbody>
         {% for a in assignments %}
         <tr>
@@ -29,11 +30,11 @@
                 {% for val, lbl in a.STATUS_CHOICES %}<option value="{{ val }}" {% if a.status == val %}selected{% endif %}>{{ lbl }}</option>{% endfor %}
               </select>
               <input type="number" name="quality_score" placeholder="Score 0-10" min="0" max="10" step="0.1" class="form-control form-control-sm d-inline w-auto">
-              <button type="submit" class="btn btn-sm btn-primary">Update</button>
+              <button type="submit" class="btn btn-sm btn-primary">{{ 'Update'|tr:preferred_language }}</button>
             </form>
           </td>
         </tr>
-        {% empty %}<tr><td colspan="8" class="text-center text-muted py-3">No assignments yet.</td></tr>{% endfor %}
+        {% empty %}<tr><td colspan="8" class="text-center text-muted py-3">{{ 'No assignments yet.'|tr:preferred_language }}</td></tr>{% endfor %}
       </tbody>
     </table>
   </div>

@@ -179,6 +179,11 @@ class Sponsor(models.Model):
 #  EVENT
 # ─────────────────────────────────────────────
 class Event(models.Model):
+    MODE_CHOICES = [
+        ('online', 'Online'),
+        ('offline', 'Offline'),
+    ]
+
     STATUS_CHOICES = [
         ('draft', 'Draft'),
         ('planning', 'Planning'),
@@ -222,6 +227,7 @@ class Event(models.Model):
     uid          = models.CharField(max_length=100, unique=True, help_text='Unique Event ID')
     title        = models.CharField(max_length=300)
     category     = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='events')
+    mode         = models.CharField(max_length=10, choices=MODE_CHOICES, default='online')
     description  = models.TextField(blank=True)
     image        = models.ImageField(upload_to='events/', blank=True, null=True)
     qr_code_image = models.ImageField(upload_to='events/qr_codes/', blank=True, null=True)

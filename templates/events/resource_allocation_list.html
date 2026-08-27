@@ -1,17 +1,18 @@
 {% extends 'base.html' %}
+{% load translate_tags %}
 {% block title %}Resource Allocations{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h2><i class="bi bi-diagram-3 me-2 text-primary"></i>Resource Allocations</h2>
+  <h2><i class="bi bi-diagram-3 me-2 text-primary"></i>{{ 'Resource Allocations'|tr:preferred_language }}</h2>
 </div>
 <div class="card">
   <div class="card-header-custom">
-    <h5>Allocations</h5>
-    <a href="{% url 'resource_allocation_create' %}" class="btn btn-success btn-sm"><i class="bi bi-plus-circle me-1"></i>Allocate Resource</a>
+    <h5>{{ 'Allocations'|tr:preferred_language }}</h5>
+    <a href="{% url 'resource_allocation_create' %}" class="btn btn-success btn-sm"><i class="bi bi-plus-circle me-1"></i>{{ 'Allocate Resource'|tr:preferred_language }}</a>
   </div>
   <div class="p-0">
     <table class="table-custom">
-      <thead><tr><th>#</th><th>Resource</th><th>Event</th><th>Qty</th><th>From</th><th>To</th><th>Status</th><th>Actions</th></tr></thead>
+      <thead><tr><th>#</th><th>{{ 'Resource'|tr:preferred_language }}</th><th>{{ 'Event'|tr:preferred_language }}</th><th>{{ 'Qty'|tr:preferred_language }}</th><th>{{ 'From'|tr:preferred_language }}</th><th>{{ 'To'|tr:preferred_language }}</th><th>{{ 'Status'|tr:preferred_language }}</th><th>{{ 'Actions'|tr:preferred_language }}</th></tr></thead>
       <tbody>
         {% for a in allocations %}
         <tr>
@@ -30,11 +31,11 @@
                 <option value="returned" {% if a.status == 'returned' %}selected{% endif %}>Returned</option>
                 <option value="cancelled" {% if a.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
               </select>
-              <button type="submit" class="btn btn-sm btn-primary">Update</button>
+              <button type="submit" class="btn btn-sm btn-primary">{{ 'Update'|tr:preferred_language }}</button>
             </form>
           </td>
         </tr>
-        {% empty %}<tr><td colspan="8" class="text-center text-muted py-3">No allocations yet.</td></tr>{% endfor %}
+        {% empty %}<tr><td colspan="8" class="text-center text-muted py-3">{{ 'No allocations yet.'|tr:preferred_language }}</td></tr>{% endfor %}
       </tbody>
     </table>
   </div>

@@ -1,17 +1,18 @@
 {% extends 'base.html' %}
+{% load translate_tags %}
 {% block title %}Resources{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h2><i class="bi bi-box-seam me-2 text-primary"></i>Resource Repository</h2>
+  <h2><i class="bi bi-box-seam me-2 text-primary"></i>{{ 'Resource Repository'|tr:preferred_language }}</h2>
 </div>
 <div class="card">
   <div class="card-header-custom">
-    <h5>All Resources</h5>
-    <a href="{% url 'resource_create' %}" class="btn btn-success btn-sm"><i class="bi bi-plus-circle me-1"></i>Add Resource</a>
+    <h5>{{ 'All Resources'|tr:preferred_language }}</h5>
+    <a href="{% url 'resource_create' %}" class="btn btn-success btn-sm"><i class="bi bi-plus-circle me-1"></i>{{ 'Add Resource'|tr:preferred_language }}</a>
   </div>
   <div class="p-0">
     <table class="table-custom">
-      <thead><tr><th>#</th><th>Name</th><th>Type</th><th>Qty</th><th>Unit Cost</th><th>Status</th><th>Action</th></tr></thead>
+      <thead><tr><th>#</th><th>{{ 'Name'|tr:preferred_language }}</th><th>{{ 'Type'|tr:preferred_language }}</th><th>{{ 'Qty'|tr:preferred_language }}</th><th>{{ 'Unit Cost'|tr:preferred_language }}</th><th>{{ 'Status'|tr:preferred_language }}</th><th>{{ 'Action'|tr:preferred_language }}</th></tr></thead>
       <tbody>
         {% for r in resources %}
         <tr>
@@ -26,7 +27,7 @@
             <a href="{% url 'resource_delete' r.pk %}" class="btn-del"><i class="bi bi-trash"></i></a>
           </td>
         </tr>
-        {% empty %}<tr><td colspan="7" class="text-center text-muted py-3">No resources yet.</td></tr>{% endfor %}
+        {% empty %}<tr><td colspan="7" class="text-center text-muted py-3">{{ 'No resources yet.'|tr:preferred_language }}</td></tr>{% endfor %}
       </tbody>
     </table>
   </div>

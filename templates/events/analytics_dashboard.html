@@ -1,10 +1,11 @@
 {% extends 'base.html' %}
-{% block title %}Analytics Dashboard — Event Management{% endblock %}
+{% load translate_tags %}
+{% block title %}{{ 'Analytics Dashboard'|tr:preferred_language }} — {{ 'Event Management'|tr:preferred_language }}{% endblock %}
 
 {% block content %}
 <div class="page-header">
-  <h2><i class="bi bi-graph-up me-2 text-primary"></i>Analytics & Operational Insights</h2>
-  <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item active">Analytics</li></ol></nav>
+  <h2><i class="bi bi-graph-up me-2 text-primary"></i>{{ 'Analytics & Operational Insights'|tr:preferred_language }}</h2>
+  <nav aria-label="{{ 'breadcrumb'|tr:preferred_language }}"><ol class="breadcrumb"><li class="breadcrumb-item active">{{ 'Analytics'|tr:preferred_language }}</li></ol></nav>
 </div>
 
 <!-- Top KPI cards -->
@@ -12,37 +13,37 @@
   <div class="col-6 col-xl-2">
     <div class="stat-card" style="background:#3b82f6;">
       <div class="stat-num">₹{{ total_budget_all }}</div>
-      <div class="stat-label">Total Event Budgets</div>
+      <div class="stat-label">{{ 'Total Event Budgets'|tr:preferred_language }}</div>
     </div>
   </div>
   <div class="col-6 col-xl-2">
     <div class="stat-card" style="background:#ef4444;">
       <div class="stat-num">₹{{ total_actual_all }}</div>
-      <div class="stat-label">Actual Expenses</div>
+      <div class="stat-label">{{ 'Actual Expenses'|tr:preferred_language }}</div>
     </div>
   </div>
   <div class="col-6 col-xl-2">
     <div class="stat-card" style="background:#22c55e;">
       <div class="stat-num">₹{{ total_sponsorship_all }}</div>
-      <div class="stat-label">Sponsorship Revenue</div>
+      <div class="stat-label">{{ 'Sponsorship Revenue'|tr:preferred_language }}</div>
     </div>
   </div>
   <div class="col-6 col-xl-2">
     <div class="stat-card" style="background:#8b5cf6;">
       <div class="stat-num">{{ total_vendors }}</div>
-      <div class="stat-label">Vendors ({{ active_vendors }} active)</div>
+      <div class="stat-label">{{ 'Vendors'|tr:preferred_language }} ({{ active_vendors }} {{ 'active'|tr:preferred_language }})</div>
     </div>
   </div>
   <div class="col-6 col-xl-2">
     <div class="stat-card" style="background:#14b8a6;">
       <div class="stat-num">{{ total_venues }}</div>
-      <div class="stat-label">Venues ({{ available_venues }} free)</div>
+      <div class="stat-label">{{ 'Venues'|tr:preferred_language }} ({{ available_venues }} {{ 'free'|tr:preferred_language }})</div>
     </div>
   </div>
   <div class="col-6 col-xl-2">
     <div class="stat-card" style="background:#f59e0b;">
       <div class="stat-num">{{ pending_approvals }}</div>
-      <div class="stat-label">Pending Approvals</div>
+      <div class="stat-label">{{ 'Pending Approvals'|tr:preferred_language }}</div>
     </div>
   </div>
 </div>
@@ -51,13 +52,13 @@
 <div class="row g-4 mb-4">
   <div class="col-lg-6">
     <div class="card h-100">
-      <div class="card-header-custom"><h5>Monthly Registrations (12 months)</h5></div>
+      <div class="card-header-custom"><h5>{{ 'Monthly Registrations (12 months)'|tr:preferred_language }}</h5></div>
       <div class="card-body"><canvas id="monthlyChart" height="220"></canvas></div>
     </div>
   </div>
   <div class="col-lg-6">
     <div class="card h-100">
-      <div class="card-header-custom"><h5>Event Status Distribution</h5></div>
+      <div class="card-header-custom"><h5>{{ 'Event Status Distribution'|tr:preferred_language }}</h5></div>
       <div class="card-body"><canvas id="statusChart" height="220"></canvas></div>
     </div>
   </div>
@@ -66,17 +67,17 @@
 <div class="row g-4 mb-4">
   <div class="col-lg-6">
     <div class="card h-100">
-      <div class="card-header-custom"><h5>Attendee Categories</h5></div>
+      <div class="card-header-custom"><h5>{{ 'Attendee Categories'|tr:preferred_language }}</h5></div>
       <div class="card-body"><canvas id="attendeeChart" height="220"></canvas></div>
     </div>
   </div>
   <div class="col-lg-6">
     <div class="card h-100">
-      <div class="card-header-custom"><h5>Budget by Category</h5></div>
+      <div class="card-header-custom"><h5>{{ 'Budget by Category'|tr:preferred_language }}</h5></div>
       <div class="card-body">
         {% if budget_by_cat %}
         <canvas id="budgetCatChart" height="220"></canvas>
-        {% else %}<p class="text-muted">No budget data yet.</p>{% endif %}
+        {% else %}<p class="text-muted">{{ 'No budget data yet.'|tr:preferred_language }}</p>{% endif %}
       </div>
     </div>
   </div>
@@ -86,12 +87,12 @@
 <div class="row g-4 mb-4">
   <div class="col-lg-6">
     <div class="card">
-      <div class="card-header-custom"><h5>Top Events by Registration</h5>
-        <a href="{% url 'export_analytics_csv' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1"></i>Export CSV</a>
+      <div class="card-header-custom"><h5>{{ 'Top Events by Registration'|tr:preferred_language }}</h5>
+        <a href="{% url 'export_analytics_csv' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1"></i>{{ 'Export CSV'|tr:preferred_language }}</a>
       </div>
       <div class="p-0">
         <table class="table-custom">
-          <thead><tr><th>Event</th><th>Status</th><th>Registrations</th><th>Capacity</th></tr></thead>
+          <thead><tr><th>{{ 'Event'|tr:preferred_language }}</th><th>{{ 'Status'|tr:preferred_language }}</th><th>{{ 'Registrations'|tr:preferred_language }}</th><th>{{ 'Capacity'|tr:preferred_language }}</th></tr></thead>
           <tbody>
             {% for e in top_events %}
             <tr>
@@ -100,7 +101,7 @@
               <td>{{ e.reg_count }}</td>
               <td>{{ e.max_attendance }}</td>
             </tr>
-            {% empty %}<tr><td colspan="4" class="text-muted text-center py-2">No data.</td></tr>{% endfor %}
+            {% empty %}<tr><td colspan="4" class="text-muted text-center py-2">{{ 'No data.'|tr:preferred_language }}</td></tr>{% endfor %}
           </tbody>
         </table>
       </div>
@@ -108,10 +109,10 @@
   </div>
   <div class="col-lg-6">
     <div class="card">
-      <div class="card-header-custom"><h5>Vendor Performance</h5></div>
+      <div class="card-header-custom"><h5>{{ 'Vendor Performance'|tr:preferred_language }}</h5></div>
       <div class="p-0">
         <table class="table-custom">
-          <thead><tr><th>Vendor</th><th>Service</th><th>Rating</th><th>Contract Value</th></tr></thead>
+          <thead><tr><th>{{ 'Vendor'|tr:preferred_language }}</th><th>{{ 'Service'|tr:preferred_language }}</th><th>{{ 'Rating'|tr:preferred_language }}</th><th>{{ 'Contract Value'|tr:preferred_language }}</th></tr></thead>
           <tbody>
             {% for v in vendor_perf %}
             <tr>
@@ -128,7 +129,7 @@
              </td>
               <td>₹{{ v.contract_value }}</td>
             </tr>
-            {% empty %}<tr><td colspan="4" class="text-muted text-center py-2">No rated vendors.</td></tr>{% endfor %}
+            {% empty %}<tr><td colspan="4" class="text-muted text-center py-2">{{ 'No rated vendors.'|tr:preferred_language }}</td></tr>{% endfor %}
           </tbody>
         </table>
       </div>
@@ -139,10 +140,10 @@
 <!-- Budget per event -->
 {% if budget_events %}
 <div class="card mb-4">
-  <div class="card-header-custom"><h5>Budget Utilization per Event</h5></div>
+  <div class="card-header-custom"><h5>{{ 'Budget Utilization per Event'|tr:preferred_language }}</h5></div>
   <div class="p-0">
     <table class="table-custom">
-      <thead><tr><th>Event</th><th>Projected</th><th>Actual</th><th>Utilization</th><th>Actions</th></tr></thead>
+      <thead><tr><th>{{ 'Event'|tr:preferred_language }}</th><th>{{ 'Projected'|tr:preferred_language }}</th><th>{{ 'Actual'|tr:preferred_language }}</th><th>{{ 'Utilization'|tr:preferred_language }}</th><th>{{ 'Actions'|tr:preferred_language }}</th></tr></thead>
       <tbody>
         {% for e in budget_events %}
         <tr>
@@ -161,8 +162,8 @@
             {% else %}—{% endif %}
           </td>
           <td>
-            <a href="{% url 'export_budget_csv' e.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download"></i> CSV</a>
-            <a href="{% url 'export_attendees_csv' e.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-people"></i> Attendees</a>
+            <a href="{% url 'export_budget_csv' e.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download"></i> {{ 'CSV'|tr:preferred_language }}</a>
+            <a href="{% url 'export_attendees_csv' e.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-people"></i> {{ 'Attendees'|tr:preferred_language }}</a>
           </td>
         </tr>
         {% endfor %}
@@ -174,10 +175,10 @@
 
 <!-- Resource utilization -->
 <div class="card mb-4">
-  <div class="card-header-custom"><h5>Resource Utilization</h5></div>
+  <div class="card-header-custom"><h5>{{ 'Resource Utilization'|tr:preferred_language }}</h5></div>
   <div class="card-body">
     <div class="d-flex align-items-center gap-3">
-      <span>{{ allocated_resources }} / {{ total_resources }} resources allocated</span>
+      <span>{{ allocated_resources }} / {{ total_resources }} {{ 'resources allocated'|tr:preferred_language }}</span>
       {% if total_resources > 0 %}
       {% widthratio allocated_resources total_resources 100 as res_pct %}
       <div style="flex:1;height:14px;background:#e5e7eb;border-radius:6px;max-width:300px;">
@@ -200,7 +201,7 @@ document.addEventListener('DOMContentLoaded', function () {
     type: 'bar',
     data: {
       labels: monthlyData.map(d => d.label),
-      datasets: [{ label: 'Registrations', data: monthlyData.map(d => d.count), backgroundColor: '#3b82f6', borderRadius: 4 }]
+      datasets: [{ label: '{{ 'Registrations'|tr:preferred_language|escapejs }}', data: monthlyData.map(d => d.count), backgroundColor: '#3b82f6', borderRadius: 4 }]
     },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
   });
@@ -222,7 +223,7 @@ document.addEventListener('DOMContentLoaded', function () {
     type: 'bar',
     data: {
       labels: Object.keys(attData),
-      datasets: [{ label: 'Count', data: Object.values(attData), backgroundColor: ['#3b82f6','#f59e0b','#22c55e','#ef4444','#8b5cf6','#14b8a6'], borderRadius: 4 }]
+      datasets: [{ label: '{{ 'Count'|tr:preferred_language|escapejs }}', data: Object.values(attData), backgroundColor: ['#3b82f6','#f59e0b','#22c55e','#ef4444','#8b5cf6','#14b8a6'], borderRadius: 4 }]
     },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
   });

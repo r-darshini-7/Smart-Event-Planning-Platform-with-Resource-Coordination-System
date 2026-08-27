@@ -45,6 +45,12 @@
       {% if form.category_type.errors %}<div class="text-danger small mt-1">{{ form.category_type.errors }}</div>{% endif %}
     </div>
 
+    <div class="mb-4">
+      <label class="form-label">Mode</label>
+      {{ form.mode }}
+      {% if form.mode.errors %}<div class="text-danger small mt-1">{{ form.mode.errors }}</div>{% endif %}
+    </div>
+
     <div class="mb-4" id="custom-category-wrap" style="display:none;">
       <label class="form-label">{{ 'Other Category'|tr:preferred_language }}</label>
       {{ form.custom_category }}

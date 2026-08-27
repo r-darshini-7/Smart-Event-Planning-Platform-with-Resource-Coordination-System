@@ -5,6 +5,10 @@ from .models import (
     VenueBooking, ResourceAllocation, VendorAssignment,
     BudgetItem, ApprovalRequest, EventLifecycleLog, Notification,
 )
+from .forms import (
+    EventForm, VendorForm, VenueBookingForm,
+    ResourceAllocationForm, VendorAssignmentForm,
+)
 
 
 @admin.register(Category)
@@ -16,6 +20,7 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
+    form = EventForm
     list_display = ['title', 'category', 'venue_name', 'start_time', 'end_time', 'status', 'total_budget']
     search_fields = ['title', 'uid']
     list_filter = ['status', 'category', 'job_category', 'event_type']
@@ -54,6 +59,7 @@ class ResourceAdmin(admin.ModelAdmin):
 
 @admin.register(Vendor)
 class VendorAdmin(admin.ModelAdmin):
+    form = VendorForm
     list_display = ['name', 'service_type', 'contact_person', 'performance_rating', 'status']
     search_fields = ['name', 'contact_person']
     list_filter = ['service_type', 'status']
@@ -68,18 +74,21 @@ class SponsorAdmin(admin.ModelAdmin):
 
 @admin.register(VenueBooking)
 class VenueBookingAdmin(admin.ModelAdmin):
+    form = VenueBookingForm
     list_display = ['venue', 'event', 'start_time', 'end_time', 'status', 'total_cost']
     list_filter = ['status']
 
 
 @admin.register(ResourceAllocation)
 class ResourceAllocationAdmin(admin.ModelAdmin):
+    form = ResourceAllocationForm
     list_display = ['resource', 'event', 'quantity', 'start_time', 'end_time', 'status']
     list_filter = ['status']
 
 
 @admin.register(VendorAssignment)
 class VendorAssignmentAdmin(admin.ModelAdmin):
+    form = VendorAssignmentForm
     list_display = ['vendor', 'event', 'agreed_amount', 'status', 'delivery_deadline']
     list_filter = ['status']
 

@@ -6,9 +6,7 @@ from .translations import TRANSLATIONS, translate_text
 
 
 def preferred_language(request):
-    language = request.session.get('preferred_language') or request.session.get('django_language') or translation.get_language() or 'en'
-    request.session['preferred_language'] = language
-    request.session['django_language'] = language
+    language = 'en'
     translation.activate(language)
     request.LANGUAGE_CODE = language
 
@@ -38,6 +36,47 @@ def preferred_language(request):
         'complete_event_list': translate('Complete Event List'),
         'create_user_mark': translate('Create User Mark'),
         'user_mark_list': translate('User Mark List'),
+        'analytics': translate('Analytics'),
+        'search_events': translate('Search events...'),
+        'calendar': translate('Calendar'),
+        'scan_qr_code': translate('Scan QR Code'),
+        'loading_cameras': translate('Loading cameras...'),
+        'camera_unavailable': translate('Camera unavailable.'),
+        'cancel': translate('Cancel'),
+        'torch': translate('Torch'),
+        'scan_qr': translate('Scan QR'),
+        'venue_management': translate('VENUE MANAGEMENT'),
+        'venues': translate('Venues'),
+        'add_venue': translate('Add Venue'),
+        'venue_list': translate('Venue List'),
+        'venue_bookings': translate('Venue Bookings'),
+        'book_venue': translate('Book Venue'),
+        'bookings_list': translate('Bookings List'),
+        'resource_management': translate('RESOURCE MANAGEMENT'),
+        'resources': translate('Resources'),
+        'add_resource': translate('Add Resource'),
+        'resource_list': translate('Resource List'),
+        'allocations': translate('Allocations'),
+        'allocate_resource': translate('Allocate Resource'),
+        'allocation_list': translate('Allocation List'),
+        'vendor_management': translate('VENDOR MANAGEMENT'),
+        'vendors': translate('Vendors'),
+        'add_vendor': translate('Add Vendor'),
+        'vendor_list': translate('Vendor List'),
+        'assignments': translate('Assignments'),
+        'assign_vendor': translate('Assign Vendor'),
+        'assignment_list': translate('Assignment List'),
+        'sponsors': translate('Sponsors'),
+        'add_sponsor': translate('Add Sponsor'),
+        'sponsor_list': translate('Sponsor List'),
+        'budget_finance': translate('BUDGET & FINANCE'),
+        'budget': translate('Budget'),
+        'add_budget_item': translate('Add Budget Item'),
+        'budget_item_list': translate('Budget Item List'),
+        'workflow': translate('WORKFLOW'),
+        'approvals': translate('Approvals'),
+        'new_request': translate('New Request'),
+        'approvals_list': translate('Approvals List'),
         'platform': translate('Event Registration Platform'),
         'messages': translate('Messages'),
         'notifications': translate('Notifications'),

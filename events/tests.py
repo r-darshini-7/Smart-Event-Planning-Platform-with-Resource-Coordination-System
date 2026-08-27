@@ -15,7 +15,6 @@ class TranslationHelperTests(TestCase):
     def test_translate_text_returns_translated_value(self):
         self.assertEqual(translate_text('Login', 'hi'), 'लॉगिन')
 
-
 class DashboardAnalyticsTests(TestCase):
     def test_dashboard_context_contains_registration_chart_data(self):
         admin = User.objects.create_user(username='admin', password='pass', is_staff=True, is_superuser=True)

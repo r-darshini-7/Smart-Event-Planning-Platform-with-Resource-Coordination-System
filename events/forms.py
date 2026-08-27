@@ -4,6 +4,7 @@ import re
 from django import forms
 from django.contrib.auth.models import User
 from django.utils import translation
+from django.utils import timezone
 from django.utils.text import slugify
 from .models import Category, Event, EventMember, EventWish, UserMark, Profile
 from .translations import translate_text
@@ -23,9 +24,39 @@ def prepend_blank_choice(field, label='---------'):
     field.choices = [('', label)] + choices
 
 
+def validate_future_schedule(form, cleaned, start_field='start_time', end_field='end_time'):
+    now = timezone.now()
+    start = cleaned.get(start_field)
+    end = cleaned.get(end_field)
+    if start and start <= now:
+        form.add_error(start_field, 'Start date and time must be in the future.')
+    if end and end <= now:
+        form.add_error(end_field, 'End date and time must be in the future.')
+    if start and end and end <= start:
+        form.add_error(end_field, 'End time must be after start time.')
+
+
+class TranslatedModelForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        language = translation.get_language() or 'en'
+        for field in self.fields.values():
+            field.label = translate_text(field.label, language)
+            if field.help_text:
+                field.help_text = translate_text(field.help_text, language)
+            if isinstance(field, forms.ModelChoiceField) and field.empty_label:
+                field.empty_label = translate_text(str(field.empty_label), language)
+            if hasattr(field.widget, 'choices'):
+                field.choices = [
+                    (value, translate_text(str(label), language))
+                    for value, label in field.choices
+                ]
+
+
+
 # ─────────────────────────────────────────────
 #  PROFILE FORMS
-class ProfileForm(forms.ModelForm):
+class ProfileForm(TranslatedModelForm):
     first_name = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'First Name'})
@@ -88,7 +119,7 @@ class ProfileForm(forms.ModelForm):
 # ─────────────────────────────────────────────
 #  CATEGORY FORMS
 # ─────────────────────────────────────────────
-class CategoryForm(forms.ModelForm):
+class CategoryForm(TranslatedModelForm):
     image = forms.ImageField(required=True, widget=forms.FileInput(attrs={'class': 'form-control'}))
 
     class Meta:
@@ -123,13 +154,13 @@ class CategoryForm(forms.ModelForm):
 # ─────────────────────────────────────────────
 #  EVENT FORMS
 # ─────────────────────────────────────────────
-class EventForm(forms.ModelForm):
+class EventForm(TranslatedModelForm):
     image = forms.ImageField(required=True, widget=forms.FileInput(attrs={'class': 'form-control'}))
 
     class Meta:
         model  = Event
         fields = [
-            'uid', 'title', 'category', 'description', 'image', 'qr_code_image',
+            'uid', 'title', 'category', 'mode', 'description', 'image', 'qr_code_image',
             'session_name', 'speaker_name',
             'start_time', 'end_time',
             'venue_name', 'location', 'map_latitude', 'map_longitude',
@@ -140,6 +171,7 @@ class EventForm(forms.ModelForm):
             'uid':           forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Unique Event ID'}),
             'title':         forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Event Title'}),
             'category':      forms.Select(attrs={'class': 'form-select'}),
+            'mode':          forms.Select(attrs={'class': 'form-select'}),
             'description':   forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
             'image':         forms.FileInput(attrs={'class': 'form-control'}),
             'qr_code_image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
@@ -215,10 +247,7 @@ class EventForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
-        start = cleaned.get('start_time')
-        end   = cleaned.get('end_time')
-        if start and end and end <= start:
-            raise forms.ValidationError('End time must be after start time.')
+        validate_future_schedule(self, cleaned)
         return cleaned
 
 
@@ -238,7 +267,7 @@ class EventCreateForm(EventForm):
 
     class Meta(EventForm.Meta):
         fields = [
-            'uid', 'title', 'description', 'image', 'qr_code_image',
+            'uid', 'title', 'category', 'mode', 'description', 'image', 'qr_code_image',
             'session_name', 'speaker_name',
             'start_time', 'end_time',
             'venue_name', 'location', 'map_latitude', 'map_longitude',
@@ -550,7 +579,7 @@ class UpdateMemberStatusForm(forms.ModelForm):
 # ─────────────────────────────────────────────
 #  EVENT WISH FORMS
 # ─────────────────────────────────────────────
-class EventWishForm(forms.ModelForm):
+class EventWishForm(TranslatedModelForm):
     class Meta:
         model  = EventWish
         fields = ['event', 'user', 'event_user_status']
@@ -571,7 +600,7 @@ class EventWishForm(forms.ModelForm):
 # ─────────────────────────────────────────────
 #  USER MARK FORMS
 # ─────────────────────────────────────────────
-class UserMarkForm(forms.ModelForm):
+class UserMarkForm(TranslatedModelForm):
     class Meta:
         model  = UserMark
         fields = ['event', 'user', 'marks', 'is_absent', 'notes']
@@ -595,7 +624,7 @@ class UserMarkForm(forms.ModelForm):
 from .models import Venue, Resource, Vendor, Sponsor, VenueBooking, ResourceAllocation, VendorAssignment, BudgetItem, ApprovalRequest
 
 
-class VenueForm(forms.ModelForm):
+class VenueForm(TranslatedModelForm):
     class Meta:
         model = Venue
         fields = ['name', 'address', 'city', 'capacity', 'contact_name', 'contact_phone', 'contact_email', 'facilities', 'hourly_rate', 'status', 'notes']
@@ -614,7 +643,7 @@ class VenueForm(forms.ModelForm):
         }
 
 
-class ResourceForm(forms.ModelForm):
+class ResourceForm(TranslatedModelForm):
     class Meta:
         model = Resource
         fields = ['name', 'resource_type', 'description', 'quantity', 'unit_cost', 'status', 'notes']
@@ -629,7 +658,7 @@ class ResourceForm(forms.ModelForm):
         }
 
 
-class VendorForm(forms.ModelForm):
+class VendorForm(TranslatedModelForm):
     class Meta:
         model = Vendor
         fields = ['name', 'service_type', 'contact_person', 'email', 'phone', 'address', 'contract_start', 'contract_end', 'contract_value', 'performance_rating', 'status', 'notes']
@@ -648,8 +677,21 @@ class VendorForm(forms.ModelForm):
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
 
+    def clean(self):
+        cleaned = super().clean()
+        today = timezone.localdate()
+        contract_start = cleaned.get('contract_start')
+        contract_end = cleaned.get('contract_end')
+        if contract_start and contract_start < today:
+            self.add_error('contract_start', 'Contract start date cannot be in the past.')
+        if contract_end and contract_end < today:
+            self.add_error('contract_end', 'Contract end date cannot be in the past.')
+        if contract_start and contract_end and contract_end < contract_start:
+            self.add_error('contract_end', 'Contract end date must be on or after the start date.')
+        return cleaned
 
-class SponsorForm(forms.ModelForm):
+
+class SponsorForm(TranslatedModelForm):
     class Meta:
         model = Sponsor
         fields = ['name', 'tier', 'contact_person', 'email', 'phone', 'logo', 'contribution', 'notes']
@@ -665,7 +707,7 @@ class SponsorForm(forms.ModelForm):
         }
 
 
-class VenueBookingForm(forms.ModelForm):
+class VenueBookingForm(TranslatedModelForm):
     class Meta:
         model = VenueBooking
         fields = ['venue', 'event', 'start_time', 'end_time', 'total_cost', 'notes']
@@ -688,8 +730,7 @@ class VenueBookingForm(forms.ModelForm):
         venue = cleaned.get('venue')
         start = cleaned.get('start_time')
         end = cleaned.get('end_time')
-        if start and end and end <= start:
-            raise forms.ValidationError('End time must be after start time.')
+        validate_future_schedule(self, cleaned)
         if venue and start and end:
             conflict = VenueBooking.objects.filter(
                 venue=venue,
@@ -704,7 +745,7 @@ class VenueBookingForm(forms.ModelForm):
         return cleaned
 
 
-class ResourceAllocationForm(forms.ModelForm):
+class ResourceAllocationForm(TranslatedModelForm):
     class Meta:
         model = ResourceAllocation
         fields = ['resource', 'event', 'quantity', 'start_time', 'end_time', 'notes']
@@ -722,8 +763,13 @@ class ResourceAllocationForm(forms.ModelForm):
         self.fields['start_time'].input_formats = ['%Y-%m-%dT%H:%M']
         self.fields['end_time'].input_formats = ['%Y-%m-%dT%H:%M']
 
+    def clean(self):
+        cleaned = super().clean()
+        validate_future_schedule(self, cleaned)
+        return cleaned
 
-class VendorAssignmentForm(forms.ModelForm):
+
+class VendorAssignmentForm(TranslatedModelForm):
     class Meta:
         model = VendorAssignment
         fields = ['vendor', 'event', 'service_description', 'agreed_amount', 'delivery_deadline', 'notes']
@@ -741,8 +787,15 @@ class VendorAssignmentForm(forms.ModelForm):
         self.fields['delivery_deadline'].input_formats = ['%Y-%m-%dT%H:%M']
         self.fields['delivery_deadline'].required = False
 
+    def clean(self):
+        cleaned = super().clean()
+        deadline = cleaned.get('delivery_deadline')
+        if deadline and deadline <= timezone.now():
+            self.add_error('delivery_deadline', 'Delivery deadline must be in the future.')
+        return cleaned
 
-class BudgetItemForm(forms.ModelForm):
+
+class BudgetItemForm(TranslatedModelForm):
     class Meta:
         model = BudgetItem
         fields = ['event', 'category', 'description', 'projected_amount', 'actual_amount', 'vendor', 'notes']
@@ -761,7 +814,7 @@ class BudgetItemForm(forms.ModelForm):
         prepend_blank_choice(self.fields['vendor'])
 
 
-class ApprovalRequestForm(forms.ModelForm):
+class ApprovalRequestForm(TranslatedModelForm):
     class Meta:
         model = ApprovalRequest
         fields = ['request_type', 'title', 'description', 'event', 'budget_item']
@@ -781,7 +834,7 @@ class ApprovalRequestForm(forms.ModelForm):
         self.fields['budget_item'].required = False
 
 
-class UpdateMemberAttendeeCategoryForm(forms.ModelForm):
+class UpdateMemberAttendeeCategoryForm(TranslatedModelForm):
     class Meta:
         model = EventMember
         fields = ['attendee_category']

@@ -43,7 +43,7 @@ from .forms  import (
 #  AUTH
 # ══════════════════════════════════════════════
 def _get_request_language(request):
-    return request.session.get('preferred_language') or request.session.get('django_language') or 'en'
+    return 'en'
 
 
 def login_view(request):
@@ -199,14 +199,6 @@ def settings_view(request):
 
     if request.method == 'POST':
         action = request.POST.get('action')
-        if action == 'change_language':
-            language = request.POST.get('language', 'en').strip()
-            request.session['preferred_language'] = language
-            request.session['django_language'] = language
-            translation.activate(language)
-            messages.success(request, translate_text(f'Language preference updated to {language}.', _get_request_language(request)))
-            return redirect('settings')
-
         if action == 'change_password':
             current_password = request.POST.get('current_password', '')
             new_password = request.POST.get('new_password', '')
@@ -243,7 +235,7 @@ def settings_view(request):
             return redirect('settings')
 
     context = {
-        'preferred_language': request.session.get('preferred_language', 'en'),
+        'preferred_language': 'en',
         'active_sessions': user_sessions,
         'current_session_key': current_session_key,
     }
@@ -2680,11 +2672,6 @@ def api_calendar_events(request):
     except Exception:
         selected_date = timezone.now().date()
 
-    # Enforce: only current + future dates
-    today = timezone.now().date()
-    if selected_date < today:
-        selected_date = today
-
     qs = Event.objects.filter(
         start_time__date=selected_date
     ).order_by('start_time')
@@ -2711,11 +2698,8 @@ def api_calendar_events(request):
     last_day = _cal.monthrange(selected_date.year, selected_date.month)[1]
     month_end = selected_date.replace(day=last_day)
 
-    # month_start is already >= today if today is later in the month;
-    # use max(month_start, today) so past days this month are excluded
-    effective_start = max(month_start, today)
     month_qs = Event.objects.filter(
-        start_time__date__gte=effective_start,
+        start_time__date__gte=month_start,
         start_time__date__lte=month_end,
     )
     if not request.user.is_staff:

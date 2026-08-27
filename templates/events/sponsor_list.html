@@ -1,17 +1,18 @@
 {% extends 'base.html' %}
+{% load translate_tags %}
 {% block title %}Sponsors{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h2><i class="bi bi-award me-2 text-primary"></i>Sponsors</h2>
+  <h2><i class="bi bi-award me-2 text-primary"></i>{{ 'Sponsors'|tr:preferred_language }}</h2>
 </div>
 <div class="card">
   <div class="card-header-custom">
-    <h5>All Sponsors</h5>
-    <a href="{% url 'sponsor_create' %}" class="btn btn-success btn-sm"><i class="bi bi-plus-circle me-1"></i>Add Sponsor</a>
+    <h5>{{ 'All Sponsors'|tr:preferred_language }}</h5>
+    <a href="{% url 'sponsor_create' %}" class="btn btn-success btn-sm"><i class="bi bi-plus-circle me-1"></i>{{ 'Add Sponsor'|tr:preferred_language }}</a>
   </div>
   <div class="p-0">
     <table class="table-custom">
-      <thead><tr><th>#</th><th>Logo</th><th>Name</th><th>Tier</th><th>Contribution</th><th>Contact</th><th>Action</th></tr></thead>
+      <thead><tr><th>#</th><th>{{ 'Logo'|tr:preferred_language }}</th><th>{{ 'Name'|tr:preferred_language }}</th><th>{{ 'Tier'|tr:preferred_language }}</th><th>{{ 'Contribution'|tr:preferred_language }}</th><th>{{ 'Contact'|tr:preferred_language }}</th><th>{{ 'Action'|tr:preferred_language }}</th></tr></thead>
       <tbody>
         {% for s in sponsors %}
         <tr>
@@ -26,7 +27,7 @@
             <a href="{% url 'sponsor_delete' s.pk %}" class="btn-del"><i class="bi bi-trash"></i></a>
           </td>
         </tr>
-        {% empty %}<tr><td colspan="7" class="text-center text-muted py-3">No sponsors yet.</td></tr>{% endfor %}
+        {% empty %}<tr><td colspan="7" class="text-center text-muted py-3">{{ 'No sponsors yet.'|tr:preferred_language }}</td></tr>{% endfor %}
       </tbody>
     </table>
   </div>

@@ -208,7 +208,7 @@
     <table class="table-custom">
       <thead>
         <tr>
-          <th>#</th><th>UID</th>
+          <th>#</th><th>{{ 'UID'|tr:preferred_language }}</th>
           <th>{{ 'Title'|tr:preferred_language }}</th>
           <th>{{ 'Category'|tr:preferred_language }}</th>
           <th>{{ 'Type'|tr:preferred_language }}</th>
@@ -229,11 +229,11 @@
             {{ e.title }}
           </td>
           <td>{{ e.category.name|default:"—" }}</td>
-          <td><span class="badge bg-secondary">{{ e.get_event_type_display }}</span></td>
+          <td><span class="badge bg-secondary">{{ e.get_event_type_display|tr:preferred_language }}</span></td>
           <td style="white-space:nowrap;">{{ e.start_time|date:"d M Y H:i" }}</td>
           <td>{{ e.venue_name|default:"—" }}</td>
-          <td>{% if e.price == 0 %}<span class="text-success fw-semibold">Free</span>{% else %}₹{{ e.price }}{% endif %}</td>
-          <td><span class="badge-status badge-{{ e.status }}">{{ e.get_status_display }}</span></td>
+          <td>{% if e.price == 0 %}<span class="text-success fw-semibold">{{ 'Free'|tr:preferred_language }}</span>{% else %}₹{{ e.price }}{% endif %}</td>
+          <td><span class="badge-status badge-{{ e.status }}">{{ e.get_status_display|tr:preferred_language }}</span></td>
           <td style="white-space:nowrap;">
             <a href="{% url 'event_detail' e.pk %}" class="btn-view btn-sm"><i class="bi bi-eye"></i></a>
             <a href="{% url 'edit_event' e.pk %}"   class="btn-edit btn-sm"><i class="bi bi-pencil"></i></a>
@@ -274,7 +274,7 @@
       </div>
       <div class="d-flex align-items-center gap-3 ms-3">
         {% if e.price == 0 %}
-          <span class="badge bg-success">Free</span>
+          <span class="badge bg-success">{{ 'Free'|tr:preferred_language }}</span>
         {% else %}
           <span class="fw-semibold" style="font-size:.88rem;">₹{{ e.price }}</span>
         {% endif %}

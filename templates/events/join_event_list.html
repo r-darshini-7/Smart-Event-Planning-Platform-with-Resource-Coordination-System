@@ -42,7 +42,7 @@
           <td>
             {% if user.is_staff %}
             <a href="{% url 'update_event_status' m.pk %}" class="btn-edit">
-              <i class="bi bi-arrow-repeat"></i>Status
+              <i class="bi bi-arrow-repeat"></i>{{ 'Status'|tr:preferred_language }}
             </a>
             <a href="{% url 'remove_event_member' m.pk %}" class="btn-del">
               <i class="bi bi-trash"></i>

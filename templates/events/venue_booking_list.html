@@ -1,17 +1,18 @@
 {% extends 'base.html' %}
+{% load translate_tags %}
 {% block title %}Venue Bookings{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h2><i class="bi bi-calendar-check me-2 text-primary"></i>Venue Bookings</h2>
+  <h2><i class="bi bi-calendar-check me-2 text-primary"></i>{{ 'Venue Bookings'|tr:preferred_language }}</h2>
 </div>
 <div class="card">
   <div class="card-header-custom">
-    <h5>All Bookings</h5>
-    <a href="{% url 'venue_booking_create' %}" class="btn btn-success btn-sm"><i class="bi bi-plus-circle me-1"></i>Book Venue</a>
+    <h5>{{ 'All Bookings'|tr:preferred_language }}</h5>
+    <a href="{% url 'venue_booking_create' %}" class="btn btn-success btn-sm"><i class="bi bi-plus-circle me-1"></i>{{ 'Book Venue'|tr:preferred_language }}</a>
   </div>
   <div class="p-0">
     <table class="table-custom">
-      <thead><tr><th>#</th><th>Venue</th><th>Event</th><th>Start</th><th>End</th><th>Cost</th><th>Status</th><th>Actions</th></tr></thead>
+      <thead><tr><th>#</th><th>{{ 'Venue'|tr:preferred_language }}</th><th>{{ 'Event'|tr:preferred_language }}</th><th>{{ 'Start'|tr:preferred_language }}</th><th>{{ 'End'|tr:preferred_language }}</th><th>{{ 'Cost'|tr:preferred_language }}</th><th>{{ 'Status'|tr:preferred_language }}</th><th>{{ 'Actions'|tr:preferred_language }}</th></tr></thead>
       <tbody>
         {% for b in bookings %}
         <tr>
@@ -24,14 +25,14 @@
           <td><span class="badge-status badge-{{ b.status }}">{{ b.get_status_display }}</span></td>
           <td>
             {% if b.status == 'pending' %}
-            <form method="post" action="{% url 'venue_booking_confirm' b.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-success">Confirm</button></form>
+            <form method="post" action="{% url 'venue_booking_confirm' b.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-success">{{ 'Confirm'|tr:preferred_language }}</button></form>
             {% endif %}
             {% if b.status != 'cancelled' %}
-            <form method="post" action="{% url 'venue_booking_cancel' b.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-warning">Cancel</button></form>
+            <form method="post" action="{% url 'venue_booking_cancel' b.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-warning">{{ 'Cancel'|tr:preferred_language }}</button></form>
             {% endif %}
           </td>
         </tr>
-        {% empty %}<tr><td colspan="8" class="text-center text-muted py-3">No bookings yet.</td></tr>{% endfor %}
+        {% empty %}<tr><td colspan="8" class="text-center text-muted py-3">{{ 'No bookings yet.'|tr:preferred_language }}</td></tr>{% endfor %}
       </tbody>
     </table>
   </div>
