@@ -15,6 +15,69 @@ class TranslationHelperTests(TestCase):
     def test_translate_text_returns_translated_value(self):
         self.assertEqual(translate_text('Login', 'hi'), 'लॉगिन')
 
+
+class AuthenticationModeTests(TestCase):
+    def test_gmail_login_uses_user_mode_without_mode_parameter(self):
+        user = User.objects.create_user(
+            username='gmail-user', email='user@gmail.com', password='pass'
+        )
+
+        response = self.client.post(reverse('login'), {
+            'username': 'user@gmail.com',
+            'password': 'pass',
+            'mode': 'admin',
+        })
+
+        self.assertRedirects(response, reverse('dashboard'))
+        user.refresh_from_db()
+        self.assertFalse(user.is_staff)
+
+    def test_organization_signup_creates_admin_account(self):
+        response = self.client.post(reverse('signup'), {
+            'name': 'Org Admin',
+            'email': 'admin@company.in',
+            'phone': '',
+            'password': 'pass',
+            'confirm_password': 'pass',
+        })
+
+        self.assertRedirects(response, reverse('dashboard'))
+        self.assertTrue(User.objects.get(email='admin@company.in').is_staff)
+
+    def test_existing_organization_user_is_promoted_on_login(self):
+        user = User.objects.create_user(
+            username='existing-admin', email='existing@organization.org', password='pass'
+        )
+
+        response = self.client.post(reverse('login'), {
+            'username': user.username,
+            'password': 'pass',
+        })
+
+        self.assertRedirects(response, reverse('dashboard'))
+        user.refresh_from_db()
+        self.assertTrue(user.is_staff)
+
+    def test_superuser_can_sign_in_as_admin_even_with_gmail_address(self):
+        User.objects.create_superuser(
+            username='main-admin', email='main@gmail.com', password='pass'
+        )
+
+        response = self.client.post(reverse('login'), {
+            'username': 'main@gmail.com',
+            'password': 'pass',
+        })
+
+        self.assertRedirects(response, reverse('dashboard'))
+
+    def test_login_page_does_not_render_mode_selector(self):
+        response = self.client.get(reverse('login'))
+
+        self.assertNotContains(response, 'Sign in mode')
+        self.assertNotContains(response, 'modeUser')
+        self.assertNotContains(response, 'modeAdmin')
+
+
 class DashboardAnalyticsTests(TestCase):
     def test_dashboard_context_contains_registration_chart_data(self):
         admin = User.objects.create_user(username='admin', password='pass', is_staff=True, is_superuser=True)

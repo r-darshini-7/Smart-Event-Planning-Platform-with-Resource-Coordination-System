@@ -46,11 +46,17 @@ def _get_request_language(request):
     return 'en'
 
 
+def _is_admin_email(email):
+    """Return True for organization addresses, while keeping Gmail user-only."""
+    normalized_email = (email or '').strip().lower()
+    domain = normalized_email.rsplit('@', 1)[-1]
+    return '@' in normalized_email and bool(domain and domain != 'gmail.com')
+
+
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
     if request.method == 'POST':
-        mode = request.POST.get('mode', 'user')
         identifier = request.POST.get('username', '').strip()
         password = request.POST.get('password', '')
 
@@ -66,18 +72,13 @@ def login_view(request):
 
         user = authenticate(request, username=username, password=password)
         if user:
-            # admin mode requires staff status OR organizer role
-            is_organizer = False
-            try:
-                is_organizer = getattr(user.profile, 'is_organizer', False)
-            except Exception:
-                pass
-            if mode == 'admin' and not user.is_staff and not is_organizer:
-                messages.error(request, translate_text('Admin credentials required for admin sign-in.', _get_request_language(request)))
-            else:
-                login(request, user)
-                messages.success(request, translate_text(f'Welcome back, {user.get_full_name() or user.username}!', _get_request_language(request)))
-                return redirect('dashboard')
+            is_admin_login = user.is_superuser or _is_admin_email(user.email)
+            if is_admin_login and not user.is_staff and not user.is_superuser:
+                user.is_staff = True
+                user.save(update_fields=['is_staff'])
+            login(request, user)
+            messages.success(request, translate_text(f'Welcome back, {user.get_full_name() or user.username}!', _get_request_language(request)))
+            return redirect('dashboard')
         else:
             messages.error(request, translate_text('Invalid username or password.', _get_request_language(request)))
     return render(request, 'events/login.html')
@@ -112,7 +113,12 @@ def signup_view(request):
             counter += 1
             username = f"{base_username}{counter}"
 
-        user = User.objects.create_user(username=username, email=email, password=password)
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            is_staff=_is_admin_email(email),
+        )
         # set full name
         if ' ' in name:
             parts = name.split(None, 1)
@@ -828,8 +834,8 @@ def _escape_pdf_text(text):
 class _PdfBuilder:
     """Minimal PDF 1.4 builder — no external dependencies."""
 
-    W = 595   # A4 width  (pt)
-    H = 842   # A4 height (pt)
+    W = 612   # US Letter width  (pt)
+    H = 792   # US Letter height (pt)
 
     def __init__(self):
         self._objects = []   # list of raw bytes for each object body
@@ -1338,34 +1344,42 @@ def _build_certificate_pdf_bytes(member):
     margin = 36
     ops.append(f'{margin:.1f} {margin:.1f} {W - 2*margin:.1f} {H - 2*margin:.1f} re S')
 
+    # Eventon brand mark and name
+    filled_rect(W / 2 - 28, H - 90, 20, 20, *TEAL)
+    ops.append(f'{rgb(*WHITE)} RG')
+    ops.append('2 w')
+    ops.append(f'{W / 2 - 24:.1f} {H - 84:.1f} m {W / 2 - 20:.1f} {H - 80:.1f} l {W / 2 - 12:.1f} {H - 88:.1f} l S')
+    txt('Eventon', W / 2 - 4, H - 84, 2, 13, *DARK)
+
     # Title
-    txt('CERTIFICATE', W / 2 - 88, H - 110, 2, 34, *TEAL)
-    txt('OF PARTICIPATION', W / 2 - 80, H - 138, 1, 16, *MUTED)
+    txt('CERTIFICATE', W / 2 - 88, H - 125, 2, 34, *TEAL)
+    txt('OF PARTICIPATION', W / 2 - 80, H - 153, 1, 16, *MUTED)
 
     # Decorative line under title
-    hline(margin + 40, H - 152, W - margin - 40, 1.5, *GOLD)
+    hline(margin + 40, H - 167, W - margin - 40, 1.5, *GOLD)
 
     # "This is to certify that"
-    txt('This is to certify that', W / 2 - 72, H - 190, 1, 12, *MUTED)
+    txt('This is to certify that', W / 2 - 72, H - 205, 1, 12, *MUTED)
 
     # Name
-    full_name = member.user.get_full_name() or member.user.username
+    full_name = ' '.join(part for part in [member.user.first_name, member.user.last_name] if part).strip()
+    full_name = full_name or member.user.username
     name_x = W / 2 - len(full_name) * 6
     if name_x < margin + 40:
         name_x = margin + 40
-    txt(full_name, name_x, H - 230, 2, 24, *DARK)
-    hline(margin + 40, H - 238, W - margin - 40, 0.8, *GOLD)
+    txt(full_name, name_x, H - 245, 2, 24, *DARK)
+    hline(margin + 40, H - 253, W - margin - 40, 0.8, *GOLD)
 
     # "has successfully participated in"
-    txt('has successfully participated in', W / 2 - 112, H - 268, 1, 12, *MUTED)
+    txt('has successfully participated in', W / 2 - 112, H - 283, 1, 12, *MUTED)
 
     # Event title
     event_title = ev.title if len(ev.title) <= 60 else ev.title[:57] + '...'
     et_x = W / 2 - len(event_title) * 4
     if et_x < margin + 40:
         et_x = margin + 40
-    txt(event_title, et_x, H - 305, 2, 18, *TEAL)
-    hline(margin + 40, H - 314, W - margin - 40, 0.8, *MUTED)
+    txt(event_title, et_x, H - 320, 2, 18, *TEAL)
+    hline(margin + 40, H - 329, W - margin - 40, 0.8, *MUTED)
 
     # Date & venue
     date_str = ev.start_time.strftime('%d %B %Y') if ev.start_time else '-'
@@ -1373,21 +1387,21 @@ def _build_certificate_pdf_bytes(member):
     if len(venue_str) > 45:
         venue_str = venue_str[:42] + '...'
 
-    txt(f'Held on  {date_str}', W / 2 - 80, H - 348, 1, 11, *MUTED)
-    txt(f'Venue    {venue_str}', W / 2 - 80, H - 366, 1, 11, *MUTED)
+    txt(f'Held on  {date_str}', W / 2 - 80, H - 363, 1, 11, *MUTED)
+    txt(f'Venue    {venue_str}', W / 2 - 80, H - 381, 1, 11, *MUTED)
 
     # Category
     cat_name = ev.category.name if ev.category else 'General'
-    txt(f'Category  {cat_name}', W / 2 - 80, H - 384, 1, 11, *MUTED)
+    txt(f'Category  {cat_name}', W / 2 - 80, H - 399, 1, 11, *MUTED)
 
     # Registration code
-    hline(margin + 40, H - 420, W - margin - 40, 0.5, *MUTED)
-    txt(f'Registration Code : {member.registration_code}', margin + 50, H - 438, 1, 9, *MUTED)
+    hline(margin + 40, H - 435, W - margin - 40, 0.5, *MUTED)
+    txt(f'Registration Code : {member.registration_code}', margin + 50, H - 453, 1, 9, *MUTED)
     issued_str = member.joined_at.strftime('%d %B %Y') if member.joined_at else '-'
-    txt(f'Issued on : {issued_str}', W - 220, H - 438, 1, 9, *MUTED)
+    txt(f'Issued on : {issued_str}', W - 220, H - 453, 1, 9, *MUTED)
 
     # Signature area
-    sig_y = H - 530
+    sig_y = H - 570
     hline(margin + 50, sig_y, margin + 180, 1, *DARK)
     txt('Authorized Signatory', margin + 52, sig_y - 14, 1, 9, *MUTED)
 
@@ -1395,7 +1409,7 @@ def _build_certificate_pdf_bytes(member):
     txt('Event Coordinator', W - 228, sig_y - 14, 1, 9, *MUTED)
 
     # Footer
-    txt('UpEvent — Event Registration Platform', W / 2 - 110, margin + 22, 1, 9, *MUTED)
+    txt('Eventon - Event Registration Platform', W / 2 - 110, margin + 22, 1, 9, *MUTED)
 
     page_stream = b._page_stream(ops)
     return b.build([page_stream])

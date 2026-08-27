@@ -60,19 +60,6 @@
   <form method="post" novalidate>
     {% csrf_token %}
     <div class="mb-3">
-      <label class="form-label fw-semibold" style="font-size:.875rem;">{{ 'Sign in mode'|tr:preferred_language }}</label>
-      <div class="d-flex gap-3">
-        <div class="form-check">
-          <input class="form-check-input" type="radio" name="mode" id="modeUser" value="user" checked>
-          <label class="form-check-label" for="modeUser">{{ 'User'|tr:preferred_language }}</label>
-        </div>
-        <div class="form-check">
-          <input class="form-check-input" type="radio" name="mode" id="modeAdmin" value="admin">
-          <label class="form-check-label" for="modeAdmin">{{ 'Admin'|tr:preferred_language }}</label>
-        </div>
-      </div>
-    </div>
-    <div class="mb-3">
       <label class="form-label fw-semibold" style="font-size:.875rem;">{{ 'Username'|tr:preferred_language }}</label>
       <div class="input-group">
         <span class="input-group-text bg-light border-end-0"><i class="bi bi-person text-muted"></i></span>
@@ -99,29 +86,5 @@
   <p id="signup-prompt" class="text-center mb-1" style="font-size:.85rem;color:#64748b;">
     {{ 'Don\'t have an account?'|tr:preferred_language }} <a href="{% url 'signup' %}">{{ 'Sign up'|tr:preferred_language }}</a>
   </p>
-  <p class="text-center mb-0" style="font-size:.75rem;color:#94a3b8;">{{ 'Use admin mode to sign in as staff.'|tr:preferred_language }}</p>
 </div>
-
-<script>
-  (function(){
-    var adminRadio = document.getElementById('modeAdmin');
-    var userRadio = document.getElementById('modeUser');
-    var signupPrompt = document.getElementById('signup-prompt');
-    function toggleSignup(){
-      if(adminRadio && adminRadio.checked){
-        signupPrompt && (signupPrompt.style.display = 'none');
-      } else {
-        signupPrompt && (signupPrompt.style.display = 'block');
-      }
-    }
-    if(adminRadio){
-      adminRadio.addEventListener('change', toggleSignup);
-    }
-    if(userRadio){
-      userRadio.addEventListener('change', toggleSignup);
-    }
-    // run on load
-    toggleSignup();
-  })();
-</script>
 {% endblock %}
