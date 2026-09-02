@@ -111,7 +111,8 @@ def preferred_language(request):
             scope_filter |= Q(target_scope='admin')
         else:
             scope_filter |= Q(target_scope='user')
-        visible_items = Notification.objects.filter(is_active=True).filter(scope_filter).order_by('-created_at')
+        recipient_filter = Q(recipient=request.user) | Q(recipient__isnull=True)
+        visible_items = Notification.objects.filter(is_active=True).filter(scope_filter).filter(recipient_filter).order_by('-created_at')
         user_messages = list(visible_items.filter(kind='message')[:10])
         user_notifications = list(visible_items.filter(kind='notification')[:10])
 

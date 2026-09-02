@@ -687,6 +687,28 @@
       font-weight:700;
     }
 
+    .global-back-button{
+      width:34px;
+      height:34px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:0;
+      margin-right:.45rem;
+      border:1px solid var(--border);
+      border-radius:8px;
+      color:var(--navbar-fg);
+      background:var(--card);
+      text-decoration:none;
+      vertical-align:middle;
+    }
+
+    .global-back-button:hover{
+      color:#fff;
+      background:var(--accent);
+      border-color:var(--accent);
+    }
+
     .breadcrumb{
     background:none;
     padding:0;
@@ -1043,11 +1065,26 @@
      jsQR canvas fallback (Firefox/Safari).  No extra <script> tags.
   ═══════════════════════════════════════════════════════════════════ */
   var QR=(function(){
-    var _stream=null,_rafId=null,_video=null,_canvas=null,_ctx=null,_detector=null,_active=false,_jsqrLoaded=false;
+    var _stream=null,_rafId=null,_video=null,_canvas=null,_ctx=null,_detector=null,_active=false,_jsqrLoaded=false,_deviceId='',_resumeTimer=null;
     function _banner(msg){var el=document.getElementById('qr-scanner-banner');if(!el)return;el.textContent=msg||'';el.classList.toggle('show',!!msg);}
     function _status(msg){var el=document.getElementById('qr-status-text');if(el)el.textContent=msg||'';}
     function _beep(){try{var a=new(window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=880;g.gain.value=0.07;o.connect(g);g.connect(a.destination);o.start();g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+0.22);o.stop(a.currentTime+0.22);setTimeout(function(){a.close&&a.close();},300);}catch(e){}}
     function _flash(){var fl=document.getElementById('qr-scanner-flash');if(fl){fl.classList.add('show');setTimeout(function(){fl.classList.remove('show');},220);}}
+    function _scheduleResume(){
+      if(_resumeTimer)clearTimeout(_resumeTimer);
+      var remaining=5;
+      _status('Ready for next scan in '+remaining+' seconds…');
+      var countdown=setInterval(function(){
+        remaining--;
+        if(remaining>0)_status('Ready for next scan in '+remaining+' seconds…');
+        else clearInterval(countdown);
+      },1000);
+      _resumeTimer=setTimeout(function(){
+        _resumeTimer=null;
+        var modal=document.getElementById('qr-scanner-modal');
+        if(modal&&modal.classList.contains('show'))_startStream(_deviceId);
+      },5000);
+    }
     function _showResult(text){
       window.lastQrScanResult=text;
       _flash();_beep();
@@ -1073,9 +1110,9 @@
             '<span style="font-size:.85rem;">'+_esc(d.name)+'</span><br>'+
             '<span style="font-size:.78rem;opacity:.8;">'+_esc(d.event)+'</span><br>'+
             '<span style="font-size:.75rem;opacity:.7;">'+_esc(d.check_in_time)+'</span>';
-        } else if(d.status==='already_checked_in'){
-          el.style.background='#fffbeb';el.style.color='#92400e';el.style.borderColor='#fcd34d';
-          el.innerHTML='<strong>⚠ Already Checked In</strong><br>'+
+        } else if(d.status==='checked_out'){
+          el.style.background='#fff7ed';el.style.color='#c2410c';el.style.borderColor='#fdba74';
+          el.innerHTML='<strong>↩ User Logged Out</strong><br>'+
             '<span style="font-size:.85rem;">'+_esc(d.name)+'</span><br>'+
             '<span style="font-size:.78rem;opacity:.8;">'+_esc(d.event)+'</span>';
         } else {
@@ -1083,11 +1120,13 @@
           el.innerHTML='<strong>✗ Error</strong><br>'+
             '<span style="font-size:.85rem;">'+(d.error?_esc(d.error):'Unknown error')+'</span>';
         }
+        _scheduleResume();
       }).catch(function(){
         if(el){
           el.style.background='#fef2f2';el.style.color='#b91c1c';el.style.borderColor='#fecaca';
           el.innerHTML='<strong>✗ Network error</strong><br><span style="font-size:.85rem;">Could not reach server.</span>';
         }
+        _scheduleResume();
       });
     }
     function _esc(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
@@ -1138,6 +1177,7 @@
       sel.onchange=function(){_startStream(this.value);};
     }
     function _startStream(deviceId){
+      _deviceId=deviceId||'';
       _stop();_active=true;_banner('');_status('Starting camera…');
       var c={video:deviceId?{deviceId:{exact:deviceId},width:{ideal:1280},height:{ideal:720}}:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}},audio:false};
       navigator.mediaDevices.getUserMedia(c).then(function(stream){
@@ -1216,6 +1256,7 @@
         }).catch(function(){_startStream('');});
       },
       close:function(){
+        if(_resumeTimer){clearTimeout(_resumeTimer);_resumeTimer=null;}
         _stop();
         var modal=document.getElementById('qr-scanner-modal');if(modal)modal.classList.remove('show');
         _banner('');
@@ -1538,6 +1579,12 @@
     });
   }
 
+  function updateVariantSwatch(id, selectedColor){
+    document.querySelectorAll('#'+id+' .swatch-btn').forEach(function(btn){
+      btn.classList.toggle('active', btn.dataset.color === selectedColor);
+    });
+  }
+
   // create the AdminLTE customizer offcanvas and wire interactions
   function createCustomizer(){
     if(document.getElementById('adminlteCustomizer'))return;
@@ -1562,12 +1609,6 @@
         '</div>'+ 
         ''
       );
-    }
-
-    function updateVariantSwatch(id, selectedColor){
-      document.querySelectorAll('#'+id+' .swatch-btn').forEach(function(btn){
-        btn.classList.toggle('active', btn.dataset.color === selectedColor);
-      });
     }
 
     function buildSwatches(id, colors, selectedColor){
@@ -2212,7 +2253,36 @@
         var html = data.reply
           .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
           .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-          .replace(/(\/event-detail\/\d+\/|\/register-event\/\d+\/|\/create-event-category\/|\/create-event\/)/g, '<a href="$1">$1</a>')
+          .replace(/(\/(?:event-detail|register-event)\/[^\s<]+|\/(?:create-event-category|create-event|event-category|event-list|my-activity|certificates|analytics|venues|venue-bookings|resources|resource-allocations|vendors|vendor-assignments|sponsors|budget|approvals|add-event-member|join-event-list|event-user-wish-list|add-event-user-wish|absense-user-list|complete-event-list|create-user-mark|user-mark-list|profile|settings)\/)/g, function(path){
+            var label = path.indexOf('/event-detail/') === 0 ? 'View event details' :
+              path.indexOf('/register-event/') === 0 ? 'Register for this event' :
+              path.indexOf('/profile/') === 0 ? 'Open Profile' :
+              path.indexOf('/create-event-category/') === 0 ? 'Create event category' :
+              path.indexOf('/create-event/') === 0 ? 'Create event' :
+              path.indexOf('/event-category/') === 0 ? 'Open categories' :
+              path.indexOf('/event-list/') === 0 ? 'Open Event List' :
+              path.indexOf('/my-activity/') === 0 ? 'Open My Activity' :
+              path.indexOf('/certificates/') === 0 ? 'Open Certificates' :
+              path.indexOf('/analytics/') === 0 ? 'Open Analytics' :
+              path.indexOf('/venues/') === 0 ? 'Open Venues' :
+              path.indexOf('/venue-bookings/') === 0 ? 'Open Venue Bookings' :
+              path.indexOf('/resources/') === 0 ? 'Open Resources' :
+              path.indexOf('/resource-allocations/') === 0 ? 'Open Resource Allocations' :
+              path.indexOf('/vendors/') === 0 ? 'Open Vendors' :
+              path.indexOf('/vendor-assignments/') === 0 ? 'Open Vendor Assignments' :
+              path.indexOf('/sponsors/') === 0 ? 'Open Sponsors' :
+              path.indexOf('/budget/') === 0 ? 'Open Budget' :
+              path.indexOf('/approvals/') === 0 ? 'Open Approvals' :
+              path.indexOf('/add-event-member/') === 0 ? 'Add Event Member' :
+              path.indexOf('/join-event-list/') === 0 ? 'Open Join Event List' :
+              path.indexOf('/event-user-wish-list/') === 0 ? 'Open Wish List' :
+              path.indexOf('/add-event-user-wish/') === 0 ? 'Add Event Wish' :
+              path.indexOf('/absense-user-list/') === 0 ? 'Open Absence List' :
+              path.indexOf('/complete-event-list/') === 0 ? 'Open Completed Events' :
+              path.indexOf('/create-user-mark/') === 0 ? 'Create User Mark' :
+              path.indexOf('/user-mark-list/') === 0 ? 'Open User Marks' : 'Open Settings';
+            return '<a href="'+path+'">'+label+'</a>';
+          })
           .replace(/\n/g, '<br>');
         _appendBubble('bot', html, true);
       } else if(data.error){
@@ -2228,6 +2298,27 @@
     });
   };
 })();
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.page-header h2').forEach(function(heading) {
+    if (heading.querySelector('.global-back-button')) return;
+    var back = document.createElement('a');
+    back.href = '/';
+    back.className = 'global-back-button';
+    back.title = 'Back';
+    back.setAttribute('aria-label', 'Back');
+    back.innerHTML = '<i class="bi bi-arrow-left" aria-hidden="true"></i>';
+    back.addEventListener('click', function(event) {
+      if (window.history.length > 1) {
+        event.preventDefault();
+        window.history.back();
+      }
+    });
+    heading.insertBefore(back, heading.firstChild);
+  });
+});
 </script>
 
 {% block extra_scripts %}{% endblock %}

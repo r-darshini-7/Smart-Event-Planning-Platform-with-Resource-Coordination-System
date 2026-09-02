@@ -129,7 +129,7 @@
     <div class="ticket-header">
       <div>
         <h4>{{ 'Registration Confirmed!'|tr:preferred_language }} 🎉</h4>
-        <div class="ticket-id">TKT-{{ member.pk }}-{{ member.registration_code|slice:":8"|upper }}</div>
+        <div class="ticket-id">{{ member.registration_code }}</div>
       </div>
       <button type="button" class="btn-close btn-close-white" onclick="closeTicketPopup()" aria-label="Close"></button>
     </div>
@@ -143,7 +143,7 @@
           </div>
           <div class="ticket-field">
             <div class="lbl">{{ 'Registration ID'|tr:preferred_language }}</div>
-            <div class="val">REG-{{ member.pk }}-{{ member.event.pk }}</div>
+            <div class="val">{{ member.registration_code }}</div>
           </div>
           <div class="ticket-field">
             <div class="lbl">{{ 'Email Address'|tr:preferred_language }}</div>

@@ -28,12 +28,17 @@ def validate_future_schedule(form, cleaned, start_field='start_time', end_field=
     now = timezone.now()
     start = cleaned.get(start_field)
     end = cleaned.get(end_field)
-    if start and start <= now:
-        form.add_error(start_field, 'Start date and time must be in the future.')
     if end and end <= now:
         form.add_error(end_field, 'End date and time must be in the future.')
     if start and end and end <= start:
         form.add_error(end_field, 'End time must be after start time.')
+
+
+class OptionalImageField(forms.ImageField):
+    def clean(self, data, initial=None):
+        if data is not None and not getattr(data, 'size', 0):
+            return None
+        return super().clean(data, initial)
 
 
 class TranslatedModelForm(forms.ModelForm):
@@ -120,7 +125,7 @@ class ProfileForm(TranslatedModelForm):
 #  CATEGORY FORMS
 # ─────────────────────────────────────────────
 class CategoryForm(TranslatedModelForm):
-    image = forms.ImageField(required=True, widget=forms.FileInput(attrs={'class': 'form-control'}))
+    image = forms.ImageField(required=False, widget=forms.FileInput(attrs={'class': 'form-control'}))
 
     class Meta:
         model  = Category
@@ -148,7 +153,22 @@ class CategoryForm(TranslatedModelForm):
             (value, translate_text(value.replace('_', ' ').title(), language))
             for value, _ in Category.STATUS_CHOICES
         ]
-        prepend_blank_choice(self.fields['status'])
+        self.fields['status'].required = False
+        if not self.instance or not self.instance.pk:
+            self.fields['status'].initial = 'active'
+
+    def clean(self):
+        cleaned = super().clean()
+        name = (cleaned.get('name') or '').strip()
+        code = (cleaned.get('code') or '').strip()
+        category_qs = Category.objects.all()
+        if self.instance and self.instance.pk:
+            category_qs = category_qs.exclude(pk=self.instance.pk)
+        if name and category_qs.filter(name__iexact=name).exists():
+            self.add_error('name', 'A category with this name already exists.')
+        if code and category_qs.filter(code__iexact=code).exists():
+            self.add_error('code', 'A category with this code already exists.')
+        return cleaned
 
 
 # ─────────────────────────────────────────────
@@ -156,6 +176,7 @@ class CategoryForm(TranslatedModelForm):
 # ─────────────────────────────────────────────
 class EventForm(TranslatedModelForm):
     image = forms.ImageField(required=True, widget=forms.FileInput(attrs={'class': 'form-control'}))
+    qr_code_image = OptionalImageField(required=False, widget=forms.ClearableFileInput(attrs={'class': 'form-control'}))
 
     class Meta:
         model  = Event
@@ -248,7 +269,22 @@ class EventForm(TranslatedModelForm):
     def clean(self):
         cleaned = super().clean()
         validate_future_schedule(self, cleaned)
+        title = (cleaned.get('title') or '').strip()
+        uid = (cleaned.get('uid') or '').strip()
+        event_qs = Event.objects.all()
+        if self.instance and self.instance.pk:
+            event_qs = event_qs.exclude(pk=self.instance.pk)
+        if title and event_qs.filter(title__iexact=title).exists():
+            self.add_error('title', 'An event with this title already exists.')
+        if uid and event_qs.filter(uid__iexact=uid).exists():
+            self.add_error('uid', 'An event with this UID already exists.')
         return cleaned
+
+    def clean_qr_code_image(self):
+        uploaded_file = self.cleaned_data.get('qr_code_image')
+        if uploaded_file and not getattr(uploaded_file, 'size', 0):
+            return None
+        return uploaded_file
 
 
 class EventCreateForm(EventForm):
@@ -300,8 +336,14 @@ class EventCreateForm(EventForm):
         cleaned = super().clean()
         category_type = cleaned.get('category_type')
         custom_category = cleaned.get('custom_category')
+        start_time = cleaned.get('start_time')
+        if start_time and start_time <= timezone.now():
+            self.add_error('start_time', 'Start date and time must be in the future.')
         if category_type == 'others' and not custom_category:
             self.add_error('custom_category', 'Please enter a category name for Others.')
+        if category_type == 'others' and custom_category:
+            if Category.objects.filter(name__iexact=custom_category.strip()).exists():
+                self.add_error('custom_category', 'A category with this name already exists.')
         return cleaned
 
 
@@ -408,11 +450,12 @@ class EventRegistrationForm(forms.Form):
         required=False,
         widget=forms.Select(choices=[('', 'Select year')] + [(str(year), str(year)) for year in range(1, 6)], attrs={'class': 'form-select'})
     )
-    graduating_year = forms.IntegerField(
+    graduating_year = forms.ChoiceField(
         required=False,
-        min_value=1900,
-        max_value=2200,
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Graduating Year'})
+        choices=[('', 'Select graduating year')] + [
+            (str(year), str(year)) for year in range(timezone.now().year, timezone.now().year + 11)
+        ],
+        widget=forms.Select(attrs={'class': 'form-select'})
     )
     domain = forms.ChoiceField(
         required=False,
@@ -534,6 +577,8 @@ class EventRegistrationForm(forms.Form):
             member = {field_name: self.data.get(f'{prefix}{field_name}', '').strip() for field_name in member_fields}
             if not member['first_name']:
                 self.add_error(None, f'Team member {index} requires first name.')
+            if not member['email']:
+                self.add_error(None, f'Team member {index} requires an email address for their profile and QR code.')
             if member['email'] and '@' not in member['email']:
                 self.add_error(None, f'Team member {index} requires a valid email.')
             self._validate_role_fields(member, f'Team member {index}')

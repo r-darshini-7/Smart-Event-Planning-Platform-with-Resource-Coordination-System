@@ -48,7 +48,7 @@
       </div>
 
       <div class="mb-4">
-        <label class="form-label">{{ 'Category Image'|tr:preferred_language }}</label>
+        <label class="form-label">{{ 'Category Image'|tr:preferred_language }} <span class="text-muted small">({{ 'optional'|tr:preferred_language }})</span></label>
         {{ form.image }}
         {% if form.image.errors %}<div class="text-danger small mt-1">{{ form.image.errors }}</div>{% endif %}
         <div class="form-text text-muted">{{ 'Upload a JPG, PNG or WebP image for this category.'|tr:preferred_language }}</div>

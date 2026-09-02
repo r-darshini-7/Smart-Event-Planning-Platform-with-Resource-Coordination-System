@@ -502,6 +502,7 @@ class Notification(models.Model):
     kind = models.CharField(max_length=20, choices=KIND_CHOICES, default='notification')
     target_scope = models.CharField(max_length=20, choices=TARGET_SCOPE_CHOICES, default='both')
     event = models.ForeignKey(Event, on_delete=models.SET_NULL, null=True, blank=True, related_name='notifications')
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_notifications')
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -547,11 +548,34 @@ class EventMember(models.Model):
     def save(self, *args, **kwargs):
         if not self.registration_code:
             import secrets
-            self.registration_code = secrets.token_urlsafe(16)
+            import string
+            event_uid = ''.join(char for char in str(self.event.uid).upper() if char.isalnum())
+            event_id = (event_uid[:3] or 'EVT').ljust(3, '0')
+            while True:
+                suffix = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6))
+                registration_code = f'REG{event_id}{suffix}'
+                if not EventMember.objects.filter(registration_code=registration_code).exists():
+                    self.registration_code = registration_code
+                    break
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.user.username} → {self.event.title} ({self.status})"
+
+
+class EventAttendance(models.Model):
+    event_member = models.ForeignKey(EventMember, on_delete=models.CASCADE, related_name='daily_attendance')
+    attendance_date = models.DateField()
+    is_present = models.BooleanField(default=True)
+    check_in_time = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('event_member', 'attendance_date')
+        ordering = ['attendance_date']
+
+    def __str__(self):
+        return f"{self.event_member} | {self.attendance_date} ({'Present' if self.is_present else 'Absent'})"
 
 
 # ─────────────────────────────────────────────

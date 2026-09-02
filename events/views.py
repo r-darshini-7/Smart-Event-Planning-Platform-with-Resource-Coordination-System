@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.sessions.models import Session
+from django.db import transaction
 from django.db.models import Q, Count
 from django.urls import reverse
 from django.utils import timezone
@@ -16,14 +17,14 @@ from django.core.mail import send_mail
 from functools import wraps
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import base64
 import io
 import urllib.parse
 
 from .models import (
-    Category, Event, EventMember, EventWish, UserMark, Profile, Notification,
+    Category, Event, EventMember, EventAttendance, EventWish, UserMark, Profile, Notification,
     Venue, Resource, Vendor, Sponsor,
     VenueBooking, ResourceAllocation, VendorAssignment,
     BudgetItem, ApprovalRequest, EventLifecycleLog,
@@ -37,6 +38,7 @@ from .forms  import (
     VenueBookingForm, ResourceAllocationForm, VendorAssignmentForm,
     BudgetItemForm, ApprovalRequestForm, UpdateMemberAttendeeCategoryForm,
 )
+from .chatbot import EventChatbot
 
 
 # ══════════════════════════════════════════════
@@ -402,7 +404,10 @@ def send_message_view(request):
 def create_event_category(request):
     form = CategoryForm(request.POST or None, request.FILES or None)
     if request.method == 'POST' and form.is_valid():
-        form.save()
+        category = form.save(commit=False)
+        if not category.status:
+            category.status = 'active'
+        category.save()
         messages.success(request, 'Category created successfully.')
         return redirect('event_category')
     return render(request, 'events/create_event_category.html', {'form': form})
@@ -770,12 +775,43 @@ def register_event(request, pk):
                 'payment_completed': event.price <= 0 or bool(form.cleaned_data.get('upi_id')),
             }
 
-            member = EventMember.objects.create(
-                event=event,
-                user=request.user,
-                status='approved' if registration_data['payment_completed'] else 'pending',
-                registration_data=registration_data,
-            )
+            with transaction.atomic():
+                member = EventMember.objects.create(
+                    event=event,
+                    user=request.user,
+                    status='approved' if registration_data['payment_completed'] else 'pending',
+                    registration_data=registration_data,
+                )
+                team_members = registration_data.get('team_members', [])
+                for team_member in team_members:
+                    email = team_member['email'].strip().lower()
+                    team_user = User.objects.filter(email__iexact=email).first()
+                    if team_user is None:
+                        username_base = re.sub(r'[^a-z0-9]+', '.', email.split('@', 1)[0].lower()).strip('.') or 'event-member'
+                        username = username_base
+                        suffix = 1
+                        while User.objects.filter(username=username).exists():
+                            suffix += 1
+                            username = f'{username_base}{suffix}'
+                        team_user = User.objects.create_user(username=username, email=email)
+                        team_user.set_unusable_password()
+                    team_user.first_name = team_member.get('first_name', '')
+                    team_user.last_name = team_member.get('last_name', '')
+                    team_user.save(update_fields=['first_name', 'last_name'])
+                    team_profile = getattr(team_user, 'profile', None)
+                    if team_profile:
+                        team_profile.phone = team_member.get('phone', '')
+                        team_profile.contact_email = email
+                        team_profile.location = team_member.get('location', '')
+                        team_profile.save(update_fields=['phone', 'contact_email', 'location', 'updated_at'])
+                    EventMember.objects.get_or_create(
+                        event=event,
+                        user=team_user,
+                        defaults={
+                            'status': 'approved' if registration_data['payment_completed'] else 'pending',
+                            'registration_data': team_member,
+                        },
+                    )
             if event.price > 0 and request.user.email:
                 payment_mode_label = form.cleaned_data.get('payment_mode')
                 if payment_mode_label == 'other':
@@ -807,8 +843,9 @@ def register_event(request, pk):
                 created_by=event.created_by or request.user,
             )
             messages.success(request, 'Registration submitted successfully. QR code generated.' if event.price <= 0 else 'Payment captured and registration completed. Receipt sent to your email.')
-            request.session['show_ticket_popup'] = member.pk
-            return redirect('event_registration_qr', pk=member.pk)
+            member_id = str(member.pk)
+            request.session['show_ticket_popup'] = member_id
+            return redirect('event_registration_qr', pk=member_id)
     else:
         form = EventRegistrationForm(user=request.user, event=event)
 
@@ -1116,23 +1153,14 @@ def _build_registration_pdf_bytes(member):
     # 7. QR CODE (embedded if qrcode available, else placeholder)
     # ══════════════════════════════════════════════════════════════
     qr_x, qr_y, qr_size = W - 140, 80, 100
-    qr_img_id = None
+    qr_jpeg = None
     try:
-        import qrcode as _qrcode
-        import struct, zlib
-        qr = _qrcode.make(member.registration_code)
-        qr_buf = io.BytesIO()
-        qr.save(qr_buf, format='PNG')
-        qr_png = qr_buf.getvalue()
-
-        builder = _PdfBuilder.__new__(_PdfBuilder)
-        builder.__init__()
-        # embed as Image XObject
-        # We encode the PNG as an inline image stream (base85 not needed — raw PNG via DCTDecode not applicable, use flat PNG via FlateDecode via /ASCIIHexDecode)
-        import base64 as _b64
-        png_b64 = _b64.b64encode(qr_png).decode()
-        # Not all viewers support arbitrary PNGs inline. Use a placeholder box instead.
-        raise ImportError("use placeholder")
+        from PIL import Image
+        qr_png = _build_qr_image(member.registration_code)
+        qr_image = Image.open(io.BytesIO(qr_png)).convert('RGB')
+        qr_jpeg_buffer = io.BytesIO()
+        qr_image.save(qr_jpeg_buffer, format='JPEG', quality=92)
+        qr_jpeg = (qr_jpeg_buffer.getvalue(), qr_image.width, qr_image.height)
     except Exception:
         # Draw a dashed placeholder box with "QR" label
         ops.append(f'[4 2] 0 d')
@@ -1166,8 +1194,24 @@ def _build_registration_pdf_bytes(member):
 
     # ── assemble PDF ─────────────────────────────────────────────
     b = _PdfBuilder()
+    xobj_ids = {}
+    if qr_jpeg:
+        jpeg_bytes, image_width, image_height = qr_jpeg
+        image_header = (
+            f'<< /Type /XObject /Subtype /Image /Width {image_width} /Height {image_height} '
+            f'/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length {len(jpeg_bytes)} >>\n'
+            'stream\n'
+        ).encode()
+        image_id = b._add_obj(image_header + jpeg_bytes + b'\nendstream')
+        xobj_ids['QR'] = image_id
+        ops.extend([
+            'q',
+            f'{qr_size:.1f} 0 0 {qr_size:.1f} {qr_x:.1f} {qr_y:.1f} cm',
+            '/ImQR Do',
+            'Q',
+        ])
     page_stream = b._page_stream(ops)
-    return b.build([page_stream])
+    return b.build([page_stream], xobj_ids=xobj_ids)
 
 
 @login_required
@@ -1210,7 +1254,7 @@ def event_registration_qr_download(request, pk):
 def event_registration_pdf_download(request, pk):
     member = get_object_or_404(EventMember, pk=pk, user=request.user)
 
-    pdf_bytes = _build_registration_pdf_bytes(member)
+    pdf_bytes = _build_registration_ticket_pdf_bytes(member)
 
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="registration_{member.pk}.pdf"'
@@ -1258,13 +1302,14 @@ def my_activity(request):
 
 @login_required
 def certificates(request):
-    """Show attended events where user can download participation certificates."""
+    """Show certificates only for completed events with attendance on every event day."""
     members = EventMember.objects.filter(
         user=request.user,
-        status__in=['approved', 'attended']
     ).select_related('event', 'event__category').order_by('-joined_at')
+    now = timezone.now()
+    eligible_members = [member for member in members if _certificate_is_eligible(member, now)]
     return render(request, 'events/certificates.html', {
-        'members': members,
+        'members': eligible_members,
     })
 
 
@@ -1272,13 +1317,24 @@ def certificates(request):
 def certificate_download(request, pk):
     """Download a participation certificate PDF for an event registration."""
     member = get_object_or_404(EventMember, pk=pk, user=request.user)
-    if member.status not in ('approved', 'attended'):
+    if not _certificate_is_eligible(member):
         messages.error(request, 'Certificate not available for this registration.')
         return redirect('certificates')
     pdf_bytes = _build_certificate_pdf_bytes(member)
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="certificate_{member.pk}.pdf"'
     return response
+
+
+def _certificate_is_eligible(member, now=None):
+    now = now or timezone.now()
+    if member.event.end_time > now:
+        return False
+    start_date = timezone.localtime(member.event.start_time).date()
+    end_date = timezone.localtime(member.event.end_time).date()
+    required_dates = {(start_date + timedelta(days=offset)) for offset in range((end_date - start_date).days + 1)}
+    present_dates = set(member.daily_attendance.filter(is_present=True).values_list('attendance_date', flat=True))
+    return required_dates.issubset(present_dates)
 
 
 def _build_certificate_pdf_bytes(member):
@@ -1313,7 +1369,7 @@ def _build_certificate_pdf_bytes(member):
         ops.append(f'({e(str(text))}) Tj')
         ops.append('ET')
 
-    TEAL = (23, 162, 184)
+    TEAL = (13, 42, 82)
     GOLD = (212, 175, 55)
     DARK = (30, 41, 59)
     MUTED = (100, 116, 139)
@@ -1353,7 +1409,7 @@ def _build_certificate_pdf_bytes(member):
 
     # Title
     txt('CERTIFICATE', W / 2 - 88, H - 125, 2, 34, *TEAL)
-    txt('OF PARTICIPATION', W / 2 - 80, H - 153, 1, 16, *MUTED)
+    txt('OF ACHIEVEMENT', W / 2 - 78, H - 153, 1, 16, *TEAL)
 
     # Decorative line under title
     hline(margin + 40, H - 167, W - margin - 40, 1.5, *GOLD)
@@ -1369,36 +1425,38 @@ def _build_certificate_pdf_bytes(member):
         name_x = margin + 40
     txt(full_name, name_x, H - 245, 2, 24, *DARK)
     hline(margin + 40, H - 253, W - margin - 40, 0.8, *GOLD)
+    username_text = f'Username: {member.user.username}'
+    txt(username_text, W / 2 - len(username_text) * 3.2, H - 270, 1, 9, *MUTED)
 
     # "has successfully participated in"
-    txt('has successfully participated in', W / 2 - 112, H - 283, 1, 12, *MUTED)
+    txt('has successfully completed', W / 2 - 100, H - 300, 1, 12, *MUTED)
 
     # Event title
     event_title = ev.title if len(ev.title) <= 60 else ev.title[:57] + '...'
     et_x = W / 2 - len(event_title) * 4
     if et_x < margin + 40:
         et_x = margin + 40
-    txt(event_title, et_x, H - 320, 2, 18, *TEAL)
-    hline(margin + 40, H - 329, W - margin - 40, 0.8, *MUTED)
+    txt(event_title, et_x, H - 337, 2, 18, *TEAL)
+    hline(margin + 40, H - 346, W - margin - 40, 0.8, *MUTED)
 
     # Date & venue
-    date_str = ev.start_time.strftime('%d %B %Y') if ev.start_time else '-'
+    date_str = ev.end_time.strftime('%d %B %Y') if ev.end_time else '-'
     venue_str = str(ev.venue) if ev.venue else (ev.location or '-')
     if len(venue_str) > 45:
         venue_str = venue_str[:42] + '...'
 
-    txt(f'Held on  {date_str}', W / 2 - 80, H - 363, 1, 11, *MUTED)
-    txt(f'Venue    {venue_str}', W / 2 - 80, H - 381, 1, 11, *MUTED)
+    txt(f'Completed on  {date_str}', W / 2 - 80, H - 380, 1, 11, *MUTED)
+    txt(f'Venue          {venue_str}', W / 2 - 80, H - 398, 1, 11, *MUTED)
 
     # Category
     cat_name = ev.category.name if ev.category else 'General'
-    txt(f'Category  {cat_name}', W / 2 - 80, H - 399, 1, 11, *MUTED)
+    txt(f'Category        {cat_name}', W / 2 - 80, H - 416, 1, 11, *MUTED)
 
     # Registration code
-    hline(margin + 40, H - 435, W - margin - 40, 0.5, *MUTED)
-    txt(f'Registration Code : {member.registration_code}', margin + 50, H - 453, 1, 9, *MUTED)
+    hline(margin + 40, H - 450, W - margin - 40, 0.5, *MUTED)
+    txt(f'Registration Code : {member.registration_code}', margin + 50, H - 468, 1, 9, *MUTED)
     issued_str = member.joined_at.strftime('%d %B %Y') if member.joined_at else '-'
-    txt(f'Issued on : {issued_str}', W - 220, H - 453, 1, 9, *MUTED)
+    txt(f'Issued on : {issued_str}', W - 220, H - 468, 1, 9, *MUTED)
 
     # Signature area
     sig_y = H - 570
@@ -1413,6 +1471,98 @@ def _build_certificate_pdf_bytes(member):
 
     page_stream = b._page_stream(ops)
     return b.build([page_stream])
+
+
+def _build_registration_ticket_pdf_bytes(member):
+    """Build a landscape ticket matching the registration confirmation card."""
+    from PIL import Image
+
+    builder = _PdfBuilder()
+    builder.W, builder.H = 842, 595
+    W, H = builder.W, builder.H
+    ops = []
+    escape = _escape_pdf_text
+
+    def rgb(r, g, b):
+        return f'{r / 255:.3f} {g / 255:.3f} {b / 255:.3f}'
+
+    def text(value, x, y, font=1, size=10, color=(30, 41, 59)):
+        ops.extend(['BT', f'/F{font} {size} Tf', f'{rgb(*color)} rg', f'{x:.1f} {y:.1f} Td', f'({escape(value)}) Tj', 'ET'])
+
+    def rect(x, y, width, height, color):
+        ops.extend([f'{rgb(*color)} rg', f'{x:.1f} {y:.1f} {width:.1f} {height:.1f} re f'])
+
+    def line(x1, y, x2, color=(226, 232, 240), width=1):
+        ops.extend([f'{width} w', f'{rgb(*color)} RG', f'{x1:.1f} {y:.1f} m {x2:.1f} {y:.1f} l S'])
+
+    navy = (30, 41, 59)
+    blue = (37, 99, 235)
+    muted = (100, 116, 139)
+    border = (226, 232, 240)
+    light = (248, 250, 252)
+    white = (255, 255, 255)
+
+    rect(0, 0, W, H, white)
+    rect(0, H - 86, W, 86, navy)
+    text('Eventon', 34, H - 38, 2, 22, white)
+    text('Event Registration Platform', 34, H - 59, 1, 10, (203, 213, 225))
+    text('REGISTRATION CONFIRMED!', W - 245, H - 39, 2, 13, white)
+    text(f'TKT-{str(member.pk)}-{member.registration_code[:8].upper()}', W - 245, H - 59, 1, 9, (203, 213, 225))
+
+    left_x, top_y, left_w = 34, H - 118, 560
+    text(member.event.title, left_x, top_y, 2, 21, navy)
+    text('Registration details', left_x, top_y - 22, 1, 10, muted)
+    line(left_x, top_y - 34, left_x + left_w, blue, 1.5)
+
+    full_name = member.user.get_full_name() or member.user.username
+    venue = member.event.venue.name if member.event.venue else member.event.venue_name or member.event.location or '-'
+    event_time = member.event.start_time.strftime('%d %b %Y, %I:%M %p') if member.event.start_time else '-'
+    rows = [
+        ('Attendee Name', full_name),
+        ('Username', member.user.username),
+        ('Email Address', member.user.email or '-'),
+        ('Registration ID', f'REG-{member.pk}-{member.event.pk}'),
+        ('Event Venue', venue),
+        ('Event Time', event_time),
+        ('Role / Badge', member.get_attendee_category_display()),
+    ]
+    row_y = top_y - 62
+    for index, (label, value) in enumerate(rows):
+        x = left_x if index % 2 == 0 else left_x + 285
+        if index and index % 2 == 0:
+            row_y -= 52
+        rect(x, row_y - 25, 265, 40, light)
+        text(label.upper(), x + 10, row_y + 1, 2, 7, muted)
+        value = str(value)
+        if len(value) > 34:
+            value = value[:31] + '...'
+        text(value, x + 10, row_y - 15, 1, 10, navy)
+
+    rect(left_x, 54, left_w, 34, (239, 246, 255))
+    text('Issued on', left_x + 12, 73, 2, 8, blue)
+    issued = member.joined_at.strftime('%d %b %Y, %I:%M %p') if member.joined_at else '-'
+    text(issued, left_x + 75, 73, 1, 9, muted)
+    text('Show this ticket and QR code at the event entrance.', left_x + 12, 61, 1, 8, muted)
+
+    qr_x, qr_y, qr_size = 650, 184, 150
+    image_bytes = _build_qr_image(member.registration_code)
+    qr_image = Image.open(io.BytesIO(image_bytes)).convert('RGB')
+    qr_buffer = io.BytesIO()
+    qr_image.save(qr_buffer, format='JPEG', quality=95)
+    jpeg_bytes = qr_buffer.getvalue()
+    image_header = (
+        f'<< /Type /XObject /Subtype /Image /Width {qr_image.width} /Height {qr_image.height} '
+        f'/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length {len(jpeg_bytes)} >>\n'
+        'stream\n'
+    ).encode()
+    image_id = builder._add_obj(image_header + jpeg_bytes + b'\nendstream')
+    rect(620, 112, 188, 345, light)
+    text('SCAN AT ENTRY', 669, 429, 2, 10, blue)
+    ops.extend(['q', f'{qr_size:.1f} 0 0 {qr_size:.1f} {qr_x:.1f} {qr_y:.1f} cm', '/ImQR Do', 'Q'])
+    text(member.registration_code, 654, 166, 1, 8, muted)
+    text('Valid registration QR', 670, 143, 1, 8, muted)
+    text('Eventon', 700, 72, 2, 10, navy)
+    return builder.build([builder._page_stream(ops)], xobj_ids={'QR': image_id})
 
 
 @admin_required
@@ -2315,6 +2465,11 @@ def api_events(request):
         if not payload.get(field):
             return _json_response({'error': f'Missing field: {field}'}, 400)
 
+    if Event.objects.filter(uid__iexact=str(payload['uid']).strip()).exists():
+        return _json_response({'error': 'An event with this UID already exists.'}, 409)
+    if Event.objects.filter(title__iexact=str(payload['title']).strip()).exists():
+        return _json_response({'error': 'An event with this title already exists.'}, 409)
+
     from django.utils.dateparse import parse_datetime
     try:
         event = Event.objects.create(
@@ -2629,7 +2784,7 @@ def api_analytics(request):
 @csrf_exempt
 @login_required
 def api_checkin_by_code(request):
-    """POST {"code": "<registration_code>"} → mark member attended, return JSON."""
+    """POST {"code": "<registration_code>"} -> toggle attendance during the event."""
     if not request.user.is_staff:
         return _json_response({'error': 'Admin access required.'}, 403)
     if request.method != 'POST':
@@ -2645,29 +2800,52 @@ def api_checkin_by_code(request):
         member = EventMember.objects.select_related('user', 'event').get(registration_code=code)
     except EventMember.DoesNotExist:
         return _json_response({'error': 'No registration found for this QR code.'}, 404)
-    if member.status == 'attended':
+    now = timezone.now()
+    if not (member.event.start_time <= now <= member.event.end_time):
         return _json_response({
-            'status': 'already_checked_in',
-            'message': f'{member.user.get_full_name() or member.user.username} is already checked in.',
-            'name': member.user.get_full_name() or member.user.username,
+            'status': 'event_not_active',
+            'message': f'QR attendance is available only from {member.event.start_time.strftime("%d %b %Y, %I:%M %p")} to {member.event.end_time.strftime("%d %b %Y, %I:%M %p")}.',
             'event': member.event.title,
-            'check_in_time': member.check_in_time.strftime('%d %b %Y, %I:%M %p') if member.check_in_time else '',
-        })
-    member.status = 'attended'
-    member.check_in_time = timezone.now()
-    member.save()
-    # Create or update UserMark — mark present (is_absent=False)
+        }, 400)
+
+    attendance_date = timezone.localtime(now).date()
+    daily_attendance, created = EventAttendance.objects.get_or_create(
+        event_member=member,
+        attendance_date=attendance_date,
+        defaults={'is_present': True, 'check_in_time': now},
+    )
+    was_present = not created and daily_attendance.is_present
+    if not created:
+        daily_attendance.is_present = not daily_attendance.is_present
+        daily_attendance.check_in_time = now if daily_attendance.is_present else None
+        daily_attendance.save(update_fields=['is_present', 'check_in_time', 'updated_at'])
+    member.status = 'attended' if daily_attendance.is_present else 'absent'
+    member.check_in_time = daily_attendance.check_in_time
+    member.save(update_fields=['status', 'check_in_time'])
     UserMark.objects.update_or_create(
         event=member.event,
         user=member.user,
-        defaults={'is_absent': False, 'notes': f'Checked in via QR at {member.check_in_time.strftime("%d %b %Y, %I:%M %p")}'},
+        defaults={
+            'is_absent': was_present,
+            'notes': f'QR scan marked {"absent" if was_present else "present"} at {now.strftime("%d %b %Y, %I:%M %p")}',
+        },
+    )
+    attendance_label = 'absent' if was_present else 'present'
+    Notification.objects.create(
+        title=f'Attendance marked {attendance_label}',
+        message=f'Your attendance for {member.event.title} was marked {attendance_label} at {now.strftime("%d %b %Y, %I:%M %p")}.',
+        kind='notification',
+        target_scope='user',
+        event=member.event,
+        recipient=member.user,
+        created_by=request.user,
     )
     return _json_response({
-        'status': 'checked_in',
-        'message': f'{member.user.get_full_name() or member.user.username} marked present!',
+        'status': 'checked_out' if was_present else 'checked_in',
+        'message': f'{member.user.get_full_name() or member.user.username} marked {attendance_label}!',
         'name': member.user.get_full_name() or member.user.username,
         'event': member.event.title,
-        'check_in_time': member.check_in_time.strftime('%d %b %Y, %I:%M %p'),
+        'check_in_time': member.check_in_time.strftime('%d %b %Y, %I:%M %p') if member.check_in_time else '',
     })
 
 
@@ -2687,7 +2865,8 @@ def api_calendar_events(request):
         selected_date = timezone.now().date()
 
     qs = Event.objects.filter(
-        start_time__date=selected_date
+        start_time__date__lte=selected_date,
+        end_time__date__gte=selected_date,
     ).order_by('start_time')
 
     if not request.user.is_staff:
@@ -2713,15 +2892,21 @@ def api_calendar_events(request):
     month_end = selected_date.replace(day=last_day)
 
     month_qs = Event.objects.filter(
-        start_time__date__gte=month_start,
         start_time__date__lte=month_end,
+        end_time__date__gte=month_start,
     )
     if not request.user.is_staff:
         registered_event_ids = EventMember.objects.filter(user=request.user).values_list('event_id', flat=True)
         month_qs = month_qs.filter(pk__in=registered_event_ids)
 
-    event_dates = list(set(month_qs.values_list('start_time__date', flat=True)))
-    event_dates_str = [str(d) for d in event_dates]
+    event_dates = set()
+    for event_start, event_end in month_qs.values_list('start_time', 'end_time'):
+        current_date = max(event_start.date(), month_start)
+        final_date = min(event_end.date(), month_end)
+        while current_date <= final_date:
+            event_dates.add(current_date)
+            current_date += timedelta(days=1)
+    event_dates_str = [str(d) for d in sorted(event_dates)]
 
     return _json_response({
         'date': str(selected_date),
@@ -2795,6 +2980,39 @@ def _chatbot_event_reply(request, user_message, page_path=''):
             reply += f"\nRegister here: /register-event/{event.pk}/"
         return reply
 
+    if re.search(r'\b(current|currently|happening|running|live|available|upcoming)\b', question) and re.search(r'\bevents?\b', question):
+        current_events = events.filter(status='live').order_by('start_time')
+        if not current_events.exists():
+            return "There are no live Eventon events available right now."
+        reply = "**Current Eventon events**\n"
+        for current_event in current_events[:10]:
+            event_date = timezone.localtime(current_event.start_time).strftime('%d %b %Y, %I:%M %p')
+            reply += f"- **{current_event.title}** — {event_date} — /event-detail/{current_event.pk}/\n"
+        if current_events.count() > 10:
+            reply += f"Showing 10 of {current_events.count()} live events."
+        return reply.rstrip()
+
+    if re.search(r'calendar|calender|schedule|dates?', question):
+        return "Open the **Calendar** button in the top bar to view event dates and schedules."
+    if re.search(r'\b(profile|my account|personal details|user details)\b', question):
+        return "Open your profile here: /profile/. You can view and update your personal details."
+    if re.search(r'\b(settings?|preferences?|contact us|customi[sz]e)\b', question):
+        return "Open Settings here: /settings/. You can update preferences and find Eventon contact information."
+    if re.search(r'\b(messages?|inbox|conversation)\b', question):
+        return "Open the **Messages** button in the top bar to view your Eventon messages."
+    if re.search(r'\b(notifications?|alerts?)\b', question):
+        return "Open the **Notifications** button in the top bar to view your latest Eventon alerts."
+    if re.search(r'\b(home|dashboard|overview)\b', question):
+        return "Open the Dashboard here: /. It shows the Eventon overview and quick access to events."
+    if re.search(r'\b(event categories?|category list|types of events?)\b', question):
+        return "Browse event categories from the Event List or open the category page here: /event-category/."
+    if re.search(r'\b(my activity|registered events?|my registrations?)\b', question):
+        return "Open My Activity here: /my-activity/. You can view registrations, QR codes, downloads, and certificates."
+    if re.search(r'\b(certificates?|badges?|points?)\b', question):
+        return "Open Certificates here: /certificates/ to view available certificates and downloads."
+    if re.search(r'\b(event list|browse events?|find events?|all events?)\b', question):
+        return "Browse all events here: /event-list/. Select an event to view its details and registration options."
+
     if is_admin and re.search(r'categor(y|ies)|category', question):
         return (
             "In admin mode, open **Create Event Category** from the sidebar or visit "
@@ -2807,6 +3025,37 @@ def _chatbot_event_reply(request, user_message, page_path=''):
             "Fill in the title, category, date and time, venue, capacity, price, and description. "
             "Save the event, then update its status when it is ready to publish."
         )
+    if re.search(r'attendance|attend|mark.*(present|absent)|\b(check.?in|absent)\b', question):
+        if is_admin:
+            return (
+                "To manage attendance in Eventon, open **Create User Mark** here: /create-user-mark/. "
+                "Use it to record a participant as present or absent, "
+                "or use the event member check-in action to mark a registration attended. "
+                "For QR check-in, open the scanner and scan the registration QR code. "
+                "Attendance records are available in **User Mark List** here: /user-mark-list/ "
+                "and **Absent Users** here: /absense-user-list/."
+            )
+        return (
+            "Your attendance is recorded by the event organizer when you check in. "
+            "Bring your registration QR code from **My Activity** and show it at the event. "
+            "You can review your registration and QR code there."
+        )
+    if re.search(r'venue|location|resource|vendor|sponsor|budget|expense|approval|analytic|report', question):
+        if not is_admin:
+            return "That Eventon management area is available to organizers and administrators. You can ask me about events, registration, schedules, or your QR code."
+        if re.search(r'venue|location', question):
+            return "In admin mode, open **Venues** here: /venues/ to create, edit, delete, and manage venues. Venue bookings are here: /venue-bookings/."
+        if re.search(r'resource', question):
+            return "In admin mode, open **Resources** here: /resources/ to manage resources, then use **Resource Allocations** here: /resource-allocations/ to assign them to events."
+        if re.search(r'vendor', question):
+            return "In admin mode, open **Vendors** here: /vendors/ to manage vendors and **Vendor Assignments** here: /vendor-assignments/ to assign them to events."
+        if re.search(r'sponsor', question):
+            return "In admin mode, open **Sponsors** here: /sponsors/ to manage sponsors and their contributions."
+        if re.search(r'budget|expense', question):
+            return "In admin mode, open **Budget** here: /budget/ to create, edit, approve, and track event budget items."
+        if re.search(r'approval', question):
+            return "In admin mode, open **Approvals** here: /approvals/ to create requests and review pending approvals."
+        return "In admin mode, open **Analytics** here: /analytics/ to review event, registration, attendance, budget, and resource metrics."
     if re.search(r'register|sign up|join', question):
         return (
             "To register as a user, open **Event List**, select an event, review its details, "
@@ -2817,19 +3066,30 @@ def _chatbot_event_reply(request, user_message, page_path=''):
         return "Users can browse available events from **Event List** or the dashboard, then open any event to view its details."
     if re.search(r'certificate|my activity|qr|check.?in', question):
         return "Registered users can open **My Activity** to view registrations, QR codes, downloads, and certificates when available."
+    if re.search(r'contact|support|help desk', question):
+        return (
+            "For Eventon support, use /settings/. "
+            "You can contact us at eventon@gmail.com or 1234567890."
+        )
     if re.search(r'help|what can|how', question):
         role = 'admin' if is_admin else 'user'
         return (
-            f"You are using Eventon in **{role} mode**. Ask me about an event name, "
-            "how to register, event details, or how to create an event/category."
+            f"You are using Eventon in **{role} mode**. Ask me about event details, registration, "
+            "schedules, venues, attendance, QR check-in, certificates, categories, or any Eventon management feature."
         )
     return "I can only answer questions about Eventon events, event details, registration, categories, and admin workflows."
+
+
+@login_required
+def chatbot_view(request):
+    """Render the chatbot page for users to interact with the chatbot."""
+    return render(request, 'events/chatbot.html')
 
 
 @csrf_exempt
 @login_required
 def api_chatbot(request):
-    """Answer Eventon questions from local site data, with Gemini as an optional fallback."""
+    """Answer Eventon questions using the EventChatbot class."""
     if request.method != 'POST':
         return _json_response({'error': 'POST required'}, 405)
     try:
@@ -2841,51 +3101,9 @@ def api_chatbot(request):
     if not user_message:
         return _json_response({'error': 'message is required'}, 400)
 
-    page_path = (payload.get('page_url') or '').strip()
-    local_reply = _chatbot_event_reply(request, user_message, page_path=page_path)
-    if local_reply:
-        return _json_response({'reply': local_reply})
-
-    from django.conf import settings as _settings
-    import urllib.request as _urllib_request
-    import urllib.error as _urllib_error
-
-    api_key = getattr(_settings, 'GEMINI_API_KEY', '')
-    if not api_key:
-        return _json_response({'error': 'Gemini API key not configured.'}, 503)
-
-    system_instruction = (
-        "You are Eventon Assistant, an AI chatbot for the Eventon event management platform. "
-        "You ONLY answer questions related to events, event registration, event schedules, "
-        "venues, categories, speakers, tickets, QR codes, attendance, certificates, "
-        "event prices, organizers, and event platform features. "
-        "If the user asks anything unrelated to events or the Eventon platform, politely redirect them. "
-        "Keep answers concise and helpful."
+    response = _chatbot_event_reply(
+        request,
+        user_message,
+        payload.get('page_url') or request.path,
     )
-
-    # Build Gemini API request
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
-    body = _json.dumps({
-        "contents": [
-            {
-                "role": "user",
-                "parts": [{"text": f"{system_instruction}\n\nUser question: {user_message}"}]
-            }
-        ],
-        "generationConfig": {
-            "temperature": 0.7,
-            "maxOutputTokens": 512,
-        }
-    }).encode('utf-8')
-
-    req = _urllib_request.Request(url, data=body, headers={'Content-Type': 'application/json'}, method='POST')
-    try:
-        with _urllib_request.urlopen(req, timeout=15) as resp:
-            result = _json.loads(resp.read().decode('utf-8'))
-        reply = result['candidates'][0]['content']['parts'][0]['text']
-        return _json_response({'reply': reply})
-    except _urllib_error.HTTPError as e:
-        err_body = e.read().decode('utf-8', errors='replace')
-        return _json_response({'error': f'Gemini API error {e.code}: {err_body}'}, 502)
-    except Exception as e:
-        return _json_response({'error': str(e)}, 502)
+    return _json_response({'reply': response})

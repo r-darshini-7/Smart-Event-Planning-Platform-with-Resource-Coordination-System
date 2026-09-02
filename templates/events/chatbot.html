@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}Event Chatbot - Eventon{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-robot"></i> Event Assistant Chatbot
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Chatbot Container -->
+                    <div id="chatbot-container" style="height: 600px; display: flex; flex-direction: column;">
+                        <!-- Messages Area -->
+                        <div id="chatbot-messages" style="flex: 1; overflow-y: auto; margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+                            <div class="alert alert-info">
+                                <strong>Welcome!</strong> I'm here to help you with questions about events, registration, schedules, dates, and more.
+                            </div>
+                            <div class="text-muted text-center mt-3">
+                                <small>Start by asking about:</small>
+                                <ul class="list-unstyled mt-2">
+                                    <li><a href="#" onclick="askQuestion('What events are live?'); return false;">What events are live?</a></li>
+                                    <li><a href="#" onclick="askQuestion('When is my next event?'); return false;">When is my next event?</a></li>
+                                    <li><a href="#" onclick="askQuestion('How do I join an event?'); return false;">How do I join an event?</a></li>
+                                    <li><a href="#" onclick="askQuestion('Tell me about event dates'); return false;">Tell me about event dates</a></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Input Area -->
+                        <div class="input-group">
+                            <input 
+                                type="text" 
+                                id="chatbot-input" 
+                                class="form-control" 
+                                placeholder="Ask me about events..."
+                                autocomplete="off"
+                                onkeypress="handleKeyPress(event)"
+                            >
+                            <button 
+                                class="btn btn-primary" 
+                                type="button" 
+                                onclick="sendMessage()"
+                                id="send-btn"
+                            >
+                                <i class="fas fa-paper-plane"></i> Send
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Questions Section -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">Quick Topics</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button class="btn btn-outline-primary btn-sm btn-block mb-2" onclick="askQuestion('What events are live?')">
+                                <i class="fas fa-calendar"></i> Live Events
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm btn-block mb-2" onclick="askQuestion('My registered events')">
+                                <i class="fas fa-check-circle"></i> My Events
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm btn-block mb-2" onclick="askQuestion('Event reminder settings')">
+                                <i class="fas fa-bell"></i> Reminders
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button class="btn btn-outline-primary btn-sm btn-block mb-2" onclick="askQuestion('Event dates and timing')">
+                                <i class="fas fa-clock"></i> Event Dates
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm btn-block mb-2" onclick="askQuestion('Event capacity and attendance')">
+                                <i class="fas fa-users"></i> Capacity
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm btn-block mb-2" onclick="askQuestion('How to register for events')">
+                                <i class="fas fa-user-plus"></i> Registration
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    #chatbot-messages {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        word-wrap: break-word;
+    }
+
+    .chatbot-message {
+        margin: 10px 0;
+        padding: 10px 15px;
+        border-radius: 8px;
+        max-width: 80%;
+    }
+
+    .chatbot-message.user {
+        background-color: #007bff;
+        color: white;
+        margin-left: auto;
+        text-align: right;
+    }
+
+    .chatbot-message.bot {
+        background-color: white;
+        border: 1px solid #dee2e6;
+        color: #333;
+    }
+
+    .chatbot-message a {
+        color: inherit;
+        text-decoration: underline;
+    }
+
+    .chatbot-typing {
+        display: inline-block;
+        padding: 10px 15px;
+        background-color: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        font-style: italic;
+        color: #666;
+    }
+
+    .btn-block {
+        display: block;
+        width: 100%;
+    }
+</style>
+
+<script>
+function handleKeyPress(event) {
+    if (event.key === 'Enter') {
+        sendMessage();
+    }
+}
+
+function askQuestion(question) {
+    document.getElementById('chatbot-input').value = question;
+    sendMessage();
+}
+
+function sendMessage() {
+    const input = document.getElementById('chatbot-input');
+    const message = input.value.trim();
+    
+    if (!message) return;
+
+    const messagesContainer = document.getElementById('chatbot-messages');
+    
+    // Display user message
+    const userMessage = document.createElement('div');
+    userMessage.className = 'chatbot-message user';
+    userMessage.textContent = message;
+    messagesContainer.appendChild(userMessage);
+    
+    // Clear input
+    input.value = '';
+    
+    // Show typing indicator
+    const typingIndicator = document.createElement('div');
+    typingIndicator.className = 'chatbot-typing';
+    typingIndicator.textContent = 'Typing...';
+    typingIndicator.id = 'typing-indicator';
+    messagesContainer.appendChild(typingIndicator);
+    
+    // Scroll to bottom
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    // Disable input while processing
+    document.getElementById('send-btn').disabled = true;
+    input.disabled = true;
+    
+    // Send to API
+    fetch('{% url "api_chatbot" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            message: message,
+            page_url: window.location.pathname
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Remove typing indicator
+        typingIndicator.remove();
+        
+        // Display bot response
+        const botMessage = document.createElement('div');
+        botMessage.className = 'chatbot-message bot';
+        
+        if (data.reply) {
+            botMessage.innerHTML = formatBotResponse(data.reply);
+        } else if (data.message) {
+            botMessage.innerHTML = formatBotResponse(data.message);
+        } else if (data.error) {
+            botMessage.textContent = 'Error: ' + data.error;
+        } else {
+            botMessage.textContent = 'Sorry, I could not process your request.';
+        }
+        
+        messagesContainer.appendChild(botMessage);
+        
+        // Scroll to bottom
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    })
+    .catch(error => {
+        typingIndicator.remove();
+        const errorMessage = document.createElement('div');
+        errorMessage.className = 'chatbot-message bot';
+        errorMessage.textContent = 'Error: ' + error.message;
+        messagesContainer.appendChild(errorMessage);
+    })
+    .finally(() => {
+        // Re-enable input
+        document.getElementById('send-btn').disabled = false;
+        input.disabled = false;
+        input.focus();
+    });
+}
+
+function formatBotResponse(text) {
+    // Convert markdown-like formatting to HTML
+    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    text = text.replace(/\n/g, '<br>');
+    return text;
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Focus input on load
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('chatbot-input').focus();
+});
+</script>
+{% endblock %}

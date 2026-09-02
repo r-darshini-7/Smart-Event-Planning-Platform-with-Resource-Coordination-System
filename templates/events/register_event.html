@@ -146,6 +146,7 @@
   const genderOptions = '<option value="">Select gender</option><option value="female">Female</option><option value="male">Male</option><option value="prefer_not_to_say">Prefer not to say</option>';
   const domainOptions = '<option value="">Select domain</option><option value="management">Management</option><option value="engineering">Engineering</option><option value="art_science">Art & Science</option><option value="medicine">Medicine</option><option value="law">Law</option>';
   const courseOptions = '<option value="">Select course</option><option value="mtech_me">M.Tech/ME</option><option value="integrated_dual_degree">Integrated/Dual Degree</option><option value="bca">BCA</option><option value="mca">MCA</option><option value="phd">PhD</option><option value="diploma">Diploma</option><option value="other">Others</option>';
+  const graduatingYearOptions = '<option value="">Select graduating year</option>' + Array.from({length: 11}, (_, index) => { const year = new Date().getFullYear() + index; return `<option value="${year}">${year}</option>`; }).join('');
 
   function toggleRoleFields(role, student, professional, other) {
     student.classList.toggle('d-none', role !== 'student');
@@ -188,7 +189,7 @@
         <div class="col-md-6 mb-3"><label class="form-label">Course</label><select class="member-course form-select" name="team_member_${index}_course">${courseOptions}</select></div>
         <div class="col-md-6 mb-3 member-other-course d-none"><label class="form-label">Others</label><input type="text" name="team_member_${index}_other_course" class="form-control"></div>
         <div class="col-md-6 mb-3"><label class="form-label">Course Specialization</label><input type="text" name="team_member_${index}_course_specialization" class="form-control"></div>
-        <div class="col-md-6 mb-3"><label class="form-label">Graduating Year</label><input type="number" name="team_member_${index}_graduating_year" class="form-control"></div>
+        <div class="col-md-6 mb-3"><label class="form-label">Graduating Year</label><select name="team_member_${index}_graduating_year" class="form-select">${graduatingYearOptions}</select></div>
         <div class="col-md-6 mb-3"><label class="form-label">Year of Study</label><select name="team_member_${index}_year_of_study" class="form-select"><option value="">Select year</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
       </div></div>
       <div class="member-professional-fields d-none"><div class="row">
