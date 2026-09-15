@@ -9,12 +9,14 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('profile/', views.profile_view, name='profile'),
     path('settings/', views.settings_view, name='settings'),
+    path('complaints/', views.complaint_list, name='complaint_list'),
 
     # ── Dashboard ──────────────────────────────────────
-    path('', views.dashboard, name='dashboard'),
+    path('', views.dashboard_entry, name='dashboard'),
 
     # ── Category ───────────────────────────────────────
     path('send-message/',                  views.send_message_view,     name='send_message'),
+    path('notifications/mark-read/',       views.mark_notifications_read, name='mark_notifications_read'),
     path('create-event-category/',          views.create_event_category, name='create_event_category'),
     path('event-category/',                 views.event_category,        name='event_category'),
     path('edit-event-category/<str:pk>/',   views.edit_event_category,   name='edit_event_category'),

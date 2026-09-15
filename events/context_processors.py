@@ -112,9 +112,18 @@ def preferred_language(request):
         else:
             scope_filter |= Q(target_scope='user')
         recipient_filter = Q(recipient=request.user) | Q(recipient__isnull=True)
-        visible_items = Notification.objects.filter(is_active=True).filter(scope_filter).filter(recipient_filter).order_by('-created_at')
-        user_messages = list(visible_items.filter(kind='message')[:10])
-        user_notifications = list(visible_items.filter(kind='notification')[:10])
+        visible_items = Notification.objects.filter(is_active=True).filter(scope_filter).filter(recipient_filter).exclude(
+            read_records__user=request.user
+        ).order_by('-created_at')
+        unread_messages = visible_items.filter(kind='message')
+        unread_notifications = visible_items.filter(kind='notification')
+        user_messages = list(unread_messages[:10])
+        user_notifications = list(unread_notifications[:10])
+        user_messages_count = unread_messages.count()
+        user_notifications_count = unread_notifications.count()
+    else:
+        user_messages_count = 0
+        user_notifications_count = 0
 
     return {
         'preferred_language': language,
@@ -122,7 +131,7 @@ def preferred_language(request):
         'page_labels': page_labels,
         'translations': {key: translate(key) for key in TRANSLATIONS.keys()},
         'user_messages': user_messages,
-        'user_messages_count': len(user_messages),
+        'user_messages_count': user_messages_count,
         'user_notifications': user_notifications,
-        'user_notifications_count': len(user_notifications),
+        'user_notifications_count': user_notifications_count,
     }

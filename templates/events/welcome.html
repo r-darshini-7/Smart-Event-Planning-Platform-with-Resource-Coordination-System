@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+
+{% block title %}{{ 'Welcome to Eventon'|tr:preferred_language }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  #sidebar, #top-navbar, .site-footer { display: none !important; }
+  #eventon-chatbot-btn, #eventon-chatbot-window { display: none !important; }
+  #main-wrap {
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: 100vh !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(45, 212, 191, .2), transparent 30%),
+      radial-gradient(circle at 85% 80%, rgba(59, 130, 246, .25), transparent 32%),
+      #0f172a;
+  }
+  .welcome-page {
+    width: min(1080px, 100%);
+    min-height: 100vh;
+    padding: clamp(2rem, 6vw, 5rem);
+    display: flex;
+    align-items: center;
+  }
+  .welcome-content { max-width: 680px; color: #f8fafc; }
+  .welcome-mark {
+    width: 72px;
+    height: 72px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(153, 246, 228, .35);
+    border-radius: 20px;
+    background: rgba(20, 184, 166, .18);
+    color: #99f6e4;
+    font-size: 2rem;
+    box-shadow: 0 18px 60px rgba(20, 184, 166, .2);
+  }
+  .welcome-kicker {
+    margin-bottom: .9rem;
+    color: #5eead4;
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+  }
+  .welcome-content h1 {
+    max-width: 650px;
+    margin-bottom: 1.25rem;
+    font-size: clamp(2.5rem, 7vw, 5.8rem);
+    line-height: .98;
+    letter-spacing: -.04em;
+    font-weight: 800;
+  }
+  .welcome-content p {
+    max-width: 560px;
+    margin-bottom: 2.25rem;
+    color: #cbd5e1;
+    font-size: clamp(1rem, 2vw, 1.2rem);
+    line-height: 1.65;
+  }
+  .welcome-arrow {
+    width: 64px;
+    height: 64px;
+    display: inline-grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: #2dd4bf;
+    color: #042f2e;
+    font-size: 1.6rem;
+    box-shadow: 0 12px 30px rgba(45, 212, 191, .28);
+    transition: transform .2s ease, background .2s ease;
+  }
+  .welcome-arrow:hover, .welcome-arrow:focus-visible {
+    background: #99f6e4;
+    color: #042f2e;
+    transform: translateX(6px);
+  }
+  @media (max-width: 576px) {
+    .welcome-page { padding: 2rem 1.5rem; }
+    .welcome-mark { width: 60px; height: 60px; margin-bottom: 1.5rem; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="welcome-page" aria-labelledby="welcome-title">
+  <div class="welcome-content">
+    <div class="welcome-mark" aria-hidden="true"><i class="bi bi-calendar-event-fill"></i></div>
+    <div class="welcome-kicker">Eventon</div>
+    <h1 id="welcome-title">{{ 'Welcome to Eventon'|tr:preferred_language }}</h1>
+    <p>{{ 'Discover events, connect with your community, and keep every registration in one place.'|tr:preferred_language }}</p>
+    <a class="welcome-arrow" href="{% url 'login' %}" aria-label="{{ 'Continue to sign in'|tr:preferred_language }}" title="{{ 'Continue to sign in'|tr:preferred_language }}">
+      <i class="bi bi-arrow-right"></i>
+    </a>
+  </div>
+</main>
+{% endblock %}

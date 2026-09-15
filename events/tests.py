@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils import translation, timezone
 
 from .forms import CategoryForm, EventCreateForm, EventForm, EventRegistrationForm
-from .models import Category, Event, EventAttendance, EventMember, Notification, Venue
+from .models import Category, Complaint, Event, EventAttendance, EventMember, Notification, NotificationRead, Venue
 from .translations import translate_text
 
 
@@ -19,6 +19,22 @@ class TranslationHelperTests(TestCase):
 
 
 class AuthenticationModeTests(TestCase):
+    def test_anonymous_root_shows_welcome_page_with_sign_in_link(self):
+        response = self.client.get(reverse('dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="welcome-title"')
+        self.assertContains(response, reverse('login'))
+
+    def test_authenticated_root_still_shows_dashboard(self):
+        user = User.objects.create_user(username='dashboard-user', password='pass')
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'id="welcome-title"')
+
     def test_gmail_login_uses_user_mode_without_mode_parameter(self):
         user = User.objects.create_user(
             username='gmail-user', email='user@gmail.com', password='pass'
@@ -78,6 +94,61 @@ class AuthenticationModeTests(TestCase):
         self.assertNotContains(response, 'Sign in mode')
         self.assertNotContains(response, 'modeUser')
         self.assertNotContains(response, 'modeAdmin')
+
+
+class ComplaintTests(TestCase):
+    def test_complaint_form_is_hidden_from_staff_settings(self):
+        admin = User.objects.create_user(username='settings-admin', password='pass', is_staff=True)
+        self.client.force_login(admin)
+
+        response = self.client.get(reverse('settings'))
+
+        self.assertNotContains(response, 'Raise a Complaint')
+        self.assertNotContains(response, 'complaint_message')
+
+    def test_user_can_submit_complaint_from_settings(self):
+        user = User.objects.create_user(username='complainant', password='pass')
+        self.client.force_login(user)
+
+        response = self.client.post(reverse('settings'), {
+            'action': 'raise_complaint',
+            'complaint_message': 'The event details page shows an incorrect time.',
+        })
+
+        self.assertRedirects(response, reverse('settings'))
+        complaint = Complaint.objects.get(user=user)
+        self.assertEqual(complaint.message, 'The event details page shows an incorrect time.')
+
+    def test_only_staff_can_view_complaint_list(self):
+        user = User.objects.create_user(username='complainant', password='pass')
+        Complaint.objects.create(user=user, message='Please review this issue.')
+        self.client.force_login(user)
+        self.assertRedirects(self.client.get(reverse('complaint_list')), reverse('dashboard'))
+
+        admin = User.objects.create_user(username='complaint-admin', password='pass', is_staff=True)
+        self.client.force_login(admin)
+        response = self.client.get(reverse('complaint_list'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Please review this issue.')
+
+    def test_staff_reply_saves_and_notifies_complaint_user(self):
+        user = User.objects.create_user(username='complainant', password='pass')
+        admin = User.objects.create_user(username='complaint-admin', password='pass', is_staff=True)
+        complaint = Complaint.objects.create(user=user, message='The registration page is not working.')
+        self.client.force_login(admin)
+
+        response = self.client.post(reverse('complaint_list'), {
+            'complaint_id': complaint.pk,
+            'reply': 'The issue has been fixed. Please try again.',
+        })
+
+        self.assertRedirects(response, reverse('complaint_list'))
+        complaint.refresh_from_db()
+        self.assertEqual(complaint.reply, 'The issue has been fixed. Please try again.')
+        notification = Notification.objects.get(recipient=user)
+        self.assertEqual(notification.title, 'Complaint Resolved')
+        self.assertIn('The issue has been fixed.', notification.message)
 
 
 class DashboardAnalyticsTests(TestCase):
@@ -363,6 +434,40 @@ class NotificationTests(TestCase):
         notification = Notification.objects.get(title='Welcome update')
         self.assertEqual(notification.target_scope, 'user')
 
+    def test_opening_message_marks_message_read_and_removes_message_badge(self):
+        user = User.objects.create_user(username='message-reader', password='pass')
+        message = Notification.objects.create(
+            title='New message', message='Please review this.', kind='message', target_scope='user'
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(len(response.context['user_messages']), 1)
+        self.assertEqual(response.context['user_messages_count'], 1)
+
+        response = self.client.post(reverse('mark_notifications_read'), {'kind': 'message'})
+
+        self.assertEqual(response.status_code, 204)
+        self.assertTrue(NotificationRead.objects.filter(notification=message, user=user).exists())
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['user_messages_count'], 0)
+
+    def test_opening_notifications_does_not_mark_messages_read(self):
+        user = User.objects.create_user(username='notification-reader', password='pass')
+        notification = Notification.objects.create(
+            title='New alert', message='An event changed.', kind='notification', target_scope='user'
+        )
+        message = Notification.objects.create(
+            title='New message', message='Please review this.', kind='message', target_scope='user'
+        )
+        self.client.force_login(user)
+
+        response = self.client.post(reverse('mark_notifications_read'), {'kind': 'notification'})
+
+        self.assertEqual(response.status_code, 204)
+        self.assertTrue(NotificationRead.objects.filter(notification=notification, user=user).exists())
+        self.assertFalse(NotificationRead.objects.filter(notification=message, user=user).exists())
+
 
 class QRCheckinTests(TestCase):
     def setUp(self):
@@ -613,6 +718,52 @@ class EventonAssistantTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn('budget', response.json()['reply'].lower())
+
+    def test_assistant_lists_the_users_registered_events(self):
+        event = Event.objects.create(
+            uid='evt-my-registration', title='My Registered Workshop', status='live',
+            start_time=timezone.now() + timedelta(days=1),
+            end_time=timezone.now() + timedelta(days=1, hours=2),
+        )
+        EventMember.objects.create(user=self.user, event=event, status='approved')
+
+        response = self.client.post(
+            reverse('api_chatbot'),
+            data='{"message":"What events have I registered for?"}',
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('My Registered Workshop', response.json()['reply'])
+        self.assertIn('Approved', response.json()['reply'])
+
+    def test_assistant_lists_available_user_certificates(self):
+        event = Event.objects.create(
+            uid='evt-my-certificate', title='My Completed Workshop', status='completed',
+            start_time=timezone.now() - timedelta(days=2),
+            end_time=timezone.now() - timedelta(days=1),
+        )
+        member = EventMember.objects.create(user=self.user, event=event, status='attended')
+        EventAttendance.objects.create(
+            event_member=member,
+            attendance_date=timezone.localtime(event.start_time).date(),
+            is_present=True,
+        )
+        EventAttendance.objects.create(
+            event_member=member,
+            attendance_date=timezone.localtime(event.end_time).date(),
+            is_present=True,
+        )
+
+        response = self.client.post(
+            reverse('api_chatbot'),
+            data='{"message":"Show my certificates"}',
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('My Completed Workshop', response.json()['reply'])
+        self.assertIn(f'/certificates/{member.pk}/download/', response.json()['reply'])
 
     def test_assistant_lists_current_events_instead_of_matching_present_as_attendance(self):
         Event.objects.create(

@@ -1439,6 +1439,10 @@
       html += lnk('/create-user-mark/','bi-pencil-fill',navLabels.create_user_mark);
       html += lnk('/user-mark-list/','bi-journal-check',navLabels.user_mark_list);
 
+      /* ── SUPPORT ───────────────────────────────── */
+      html += hdr('{{ "Support"|tr:preferred_language|escapejs }}');
+      html += lnk('/complaints/','bi-exclamation-octagon-fill','{{ "Complaints"|tr:preferred_language|escapejs }}');
+
     } else {
       /* ── USER SIDEBAR ────────────────────────── */
       html += hdr(navLabels.main_navigation)+lnk('/','bi-house',navLabels.home);
@@ -1479,11 +1483,11 @@
         '</button>'+
         '<button type="button" class="btn btn-sm btn-transparent me-2 position-relative" title="{{ 'Messages'|tr:preferred_language }}" id="nav-messages" data-panel="messages">'+
           '<i class="bi bi-chat-dots" style="font-size:1.05rem;color:#374151"></i>'+
-          '<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;display:none" id="msg-count">0</span>'+
+          '<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;display:{% if user_messages_count %}inline-block{% else %}none{% endif %}" id="msg-count">{{ user_messages_count }}</span>'+
         '</button>'+
         '<button type="button" class="btn btn-sm btn-transparent me-2 position-relative" title="{{ 'Notifications'|tr:preferred_language }}" id="nav-notifs" data-panel="notifications">'+
           '<i class="bi bi-bell" style="font-size:1.05rem;color:#374151"></i>'+
-          '<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark" style="font-size:.6rem;display:none" id="notif-count">0</span>'+
+          '<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark" style="font-size:.6rem;display:{% if user_notifications_count %}inline-block{% else %}none{% endif %}" id="notif-count">{{ user_notifications_count }}</span>'+
         '</button>'+
         '<button class="btn btn-sm btn-transparent me-2" id="open-customizer" title="{{ 'Customize AdminLTE'|tr:preferred_language }}">'+
           '<i class="bi bi-microsoft" style="font-size:1.05rem;color:#0d6efd"></i>'+
@@ -1565,9 +1569,17 @@
 
       var countEl = type === 'notifications' ? document.getElementById('notif-count') : document.getElementById('msg-count');
       if(countEl){
-        countEl.textContent = items.length;
-        countEl.style.display = items.length ? 'inline-block' : 'none';
+        countEl.textContent = '0';
+        countEl.style.display = 'none';
       }
+
+      var csrfToken = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
+      fetch('{% url "mark_notifications_read" %}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrfToken},
+        body: 'kind=' + encodeURIComponent(type === 'notifications' ? 'notification' : 'message'),
+        credentials: 'same-origin'
+      });
     }
 
     document.querySelectorAll('[data-panel]').forEach(function(btn){

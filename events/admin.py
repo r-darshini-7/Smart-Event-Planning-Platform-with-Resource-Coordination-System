@@ -3,7 +3,7 @@ from .models import (
     Category, Event, EventMember, EventWish, UserMark, Profile,
     Venue, Resource, Vendor, Sponsor,
     VenueBooking, ResourceAllocation, VendorAssignment,
-    BudgetItem, ApprovalRequest, EventLifecycleLog, Notification,
+    BudgetItem, ApprovalRequest, EventLifecycleLog, Notification, Complaint,
 )
 from .forms import (
     EventForm, VendorForm, VenueBookingForm,
@@ -116,6 +116,22 @@ class ProfileAdmin(admin.ModelAdmin):
     list_display = ['user', 'organization', 'phone', 'is_organizer']
     list_filter = ['is_organizer']
     search_fields = ['user__username', 'user__email', 'organization']
+
+
+@admin.register(Complaint)
+class ComplaintAdmin(admin.ModelAdmin):
+    list_display = ['user', 'message_preview', 'reply_preview', 'replied_at', 'created_at']
+    search_fields = ['user__username', 'user__email', 'message', 'reply']
+    list_filter = ['created_at']
+    readonly_fields = ['user', 'message', 'created_at']
+
+    @admin.display(description='Message')
+    def message_preview(self, complaint):
+        return complaint.message[:80]
+
+    @admin.display(description='Reply')
+    def reply_preview(self, complaint):
+        return complaint.reply[:80] if complaint.reply else 'Pending'
 
 
 @admin.register(Notification)

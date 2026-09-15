@@ -24,8 +24,8 @@ import io
 import urllib.parse
 
 from .models import (
-    Category, Event, EventMember, EventAttendance, EventWish, UserMark, Profile, Notification,
-    Venue, Resource, Vendor, Sponsor,
+    Category, Event, EventMember, EventAttendance, EventWish, UserMark, Profile, Notification, NotificationRead,
+    Venue, Resource, Vendor, Sponsor, Complaint,
     VenueBooking, ResourceAllocation, VendorAssignment,
     BudgetItem, ApprovalRequest, EventLifecycleLog,
 )
@@ -242,12 +242,49 @@ def settings_view(request):
             messages.error(request, translate_text('Please confirm account deletion to proceed.', _get_request_language(request)))
             return redirect('settings')
 
+        if action == 'raise_complaint':
+            complaint_message = request.POST.get('complaint_message', '').strip()
+            if complaint_message:
+                Complaint.objects.create(user=request.user, message=complaint_message)
+                messages.success(request, translate_text('Your complaint has been submitted.', _get_request_language(request)))
+            else:
+                messages.error(request, translate_text('Please enter your complaint before submitting.', _get_request_language(request)))
+            return redirect('settings')
+
     context = {
         'preferred_language': 'en',
         'active_sessions': user_sessions,
         'current_session_key': current_session_key,
     }
     return render(request, 'events/settings.html', context)
+
+
+@admin_required
+def complaint_list(request):
+    if request.method == 'POST':
+        complaint = get_object_or_404(Complaint, pk=request.POST.get('complaint_id'))
+        reply = request.POST.get('reply', '').strip()
+        if not reply:
+            messages.error(request, 'Please enter a reply before submitting.')
+            return redirect('complaint_list')
+
+        complaint.reply = reply
+        complaint.replied_by = request.user
+        complaint.replied_at = timezone.now()
+        complaint.save(update_fields=['reply', 'replied_by', 'replied_at'])
+        Notification.objects.create(
+            title='Complaint Resolved',
+            message=f'Your complaint has been resolved: {reply}',
+            kind='notification',
+            target_scope='user',
+            recipient=complaint.user,
+            created_by=request.user,
+        )
+        messages.success(request, 'Reply sent and the user has been notified.')
+        return redirect('complaint_list')
+
+    complaints = Complaint.objects.select_related('user').all()
+    return render(request, 'events/complaint_list.html', {'complaints': complaints})
 
 
 # ══════════════════════════════════════════════
@@ -350,6 +387,12 @@ def dashboard(request):
     return render(request, 'events/dashboard.html', context)
 
 
+def dashboard_entry(request):
+    if request.user.is_authenticated:
+        return dashboard(request)
+    return render(request, 'events/welcome.html')
+
+
 @login_required
 def events_by_type(request, event_type):
     """Show a dedicated page listing events for a given event_type."""
@@ -398,6 +441,28 @@ def send_message_view(request):
 
     referer = request.META.get('HTTP_REFERER') or reverse('dashboard')
     return redirect(referer)
+
+
+@login_required
+def mark_notifications_read(request):
+    if request.method != 'POST':
+        return HttpResponse(status=405)
+
+    kind = request.POST.get('kind')
+    if kind not in ('message', 'notification'):
+        return HttpResponse(status=400)
+
+    scope_filter = Q(target_scope='both')
+    scope_filter |= Q(target_scope='admin' if request.user.is_staff else 'user')
+    visible_items = Notification.objects.filter(
+        is_active=True,
+        kind=kind,
+    ).filter(scope_filter).filter(
+        Q(recipient=request.user) | Q(recipient__isnull=True)
+    )
+    for item in visible_items:
+        NotificationRead.objects.get_or_create(notification=item, user=request.user)
+    return HttpResponse(status=204)
 
 
 @admin_required
@@ -3006,6 +3071,45 @@ def _chatbot_event_reply(request, user_message, page_path=''):
         return "Open the Dashboard here: /. It shows the Eventon overview and quick access to events."
     if re.search(r'\b(event categories?|category list|types of events?)\b', question):
         return "Browse event categories from the Event List or open the category page here: /event-category/."
+    asks_for_my_events = (
+        re.search(r'\b(my activity|my registrations?|my registered events?|my events)\b', question)
+        or re.search(r'\bevents?\s+(?:i|i am|i have)\s+registered\b', question)
+        or re.search(r'\bevents?\s+(?:have|did)\s+i\s+registered\b', question)
+        or re.search(r'\bregistered\s+events?\b', question)
+    )
+    if asks_for_my_events and not is_admin:
+        registrations = list(
+            EventMember.objects.filter(user=request.user)
+            .select_related('event')
+            .order_by('event__start_time')[:10]
+        )
+        if not registrations:
+            return "You are not registered for any events yet. Open /my-activity/ to review your registrations or browse events here: /event-list/."
+        reply = f"**Your registered events ({len(registrations)})**\n"
+        for registration in registrations:
+            event = registration.event
+            event_date = timezone.localtime(event.start_time).strftime('%d %b %Y, %I:%M %p')
+            reply += (
+                f"- **{event.title}** — {event_date} — "
+                f"{registration.get_status_display()} — /event-detail/{event.pk}/\n"
+            )
+        if EventMember.objects.filter(user=request.user).count() > len(registrations):
+            reply += "Showing your first 10 registrations. Open /my-activity/ for all of them."
+        return reply.rstrip()
+    if re.search(r'\b(my )?(certificates?|badges?)\b|\bcertificate\s+downloads?\b', question) and not is_admin:
+        registrations = EventMember.objects.filter(
+            user=request.user,
+        ).select_related('event').order_by('-event__end_time')
+        eligible = [registration for registration in registrations if _certificate_is_eligible(registration)]
+        if not eligible:
+            return "You do not have any certificates available yet. Certificates appear after you attend all days of a completed event. Open /certificates/ to check again."
+        reply = f"**Your certificates ({len(eligible)})**\n"
+        for registration in eligible[:10]:
+            reply += (
+                f"- **{registration.event.title}** — "
+                f"Download: /certificates/{registration.pk}/download/\n"
+            )
+        return reply.rstrip()
     if re.search(r'\b(my activity|registered events?|my registrations?)\b', question):
         return "Open My Activity here: /my-activity/. You can view registrations, QR codes, downloads, and certificates."
     if re.search(r'\b(certificates?|badges?|points?)\b', question):
@@ -3056,7 +3160,7 @@ def _chatbot_event_reply(request, user_message, page_path=''):
         if re.search(r'approval', question):
             return "In admin mode, open **Approvals** here: /approvals/ to create requests and review pending approvals."
         return "In admin mode, open **Analytics** here: /analytics/ to review event, registration, attendance, budget, and resource metrics."
-    if re.search(r'register|sign up|join', question):
+    if re.search(r'register|sign up|join', question) and not asks_for_my_events:
         return (
             "To register as a user, open **Event List**, select an event, review its details, "
             "and choose **Register**. Complete payment if the event has a fee. Your confirmation and QR code "

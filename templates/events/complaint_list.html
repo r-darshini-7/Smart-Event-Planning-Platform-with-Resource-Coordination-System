@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+
+{% block title %}{{ 'Complaints'|tr:preferred_language }} | {{ 'Event Registration Platform'|tr:preferred_language }}{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
+  <div>
+    <h2><i class="bi bi-exclamation-octagon-fill me-2 text-danger"></i>{{ 'Complaints'|tr:preferred_language }}</h2>
+    <p class="text-muted">{{ 'Review complaints submitted by users.'|tr:preferred_language }}</p>
+  </div>
+  <span class="badge bg-secondary">{{ complaints|length }} {{ 'total'|tr:preferred_language }}</span>
+</div>
+
+<div class="card">
+  <div class="p-0">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th>{{ 'User'|tr:preferred_language }}</th>
+          <th>{{ 'Complaint'|tr:preferred_language }}</th>
+          <th>{{ 'Reply'|tr:preferred_language }}</th>
+          <th>{{ 'Submitted'|tr:preferred_language }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for complaint in complaints %}
+        <tr>
+          <td>
+            <strong>{{ complaint.user.get_full_name|default:complaint.user.username }}</strong>
+            <div class="text-muted small">{{ complaint.user.email }}</div>
+          </td>
+          <td class="text-break">{{ complaint.message|linebreaksbr }}</td>
+          <td class="text-break">
+            {% if complaint.reply %}
+            <div class="mb-2">{{ complaint.reply|linebreaksbr }}</div>
+            <div class="text-muted small">{{ 'Replied'|tr:preferred_language }} {{ complaint.replied_at|date:'d M Y, H:i' }}</div>
+            {% else %}
+            <form method="post" action="{% url 'complaint_list' %}">
+              {% csrf_token %}
+              <input type="hidden" name="complaint_id" value="{{ complaint.pk }}" />
+              <textarea class="form-control form-control-sm mb-2" name="reply" rows="3" maxlength="5000" required placeholder="{{ 'Type your reply...'|tr:preferred_language }}"></textarea>
+              <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-send me-1"></i>{{ 'Reply and Notify'|tr:preferred_language }}</button>
+            </form>
+            {% endif %}
+          </td>
+          <td class="text-nowrap">{{ complaint.created_at|date:'d M Y, H:i' }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="text-center text-muted py-4">{{ 'No complaints have been raised yet.'|tr:preferred_language }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
