@@ -303,7 +303,7 @@ class EventCreateForm(EventForm):
 
     class Meta(EventForm.Meta):
         fields = [
-            'uid', 'title', 'category', 'mode', 'description', 'image', 'qr_code_image',
+            'uid', 'title', 'mode', 'description', 'image', 'qr_code_image',
             'session_name', 'speaker_name',
             'start_time', 'end_time',
             'venue_name', 'location', 'map_latitude', 'map_longitude',
@@ -313,6 +313,7 @@ class EventCreateForm(EventForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields.pop('category', None)
         language = translation.get_language() or 'en'
         self.fields['category_type'].label = translate_text('Category', language)
         self.fields['custom_category'].label = translate_text('Other Category', language)

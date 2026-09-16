@@ -2929,9 +2929,16 @@ def api_calendar_events(request):
     except Exception:
         selected_date = timezone.now().date()
 
+    local_timezone = timezone.get_current_timezone()
+    day_start = timezone.make_aware(
+        datetime.combine(selected_date, datetime.min.time()),
+        local_timezone,
+    )
+    next_day_start = day_start + timedelta(days=1)
+
     qs = Event.objects.filter(
-        start_time__date__lte=selected_date,
-        end_time__date__gte=selected_date,
+        start_time__lt=next_day_start,
+        end_time__gte=day_start,
     ).order_by('start_time')
 
     if not request.user.is_staff:
@@ -2956,9 +2963,19 @@ def api_calendar_events(request):
     last_day = _cal.monthrange(selected_date.year, selected_date.month)[1]
     month_end = selected_date.replace(day=last_day)
 
+    month_start_datetime = timezone.make_aware(
+        datetime.combine(month_start, datetime.min.time()),
+        local_timezone,
+    )
+    month_end_exclusive = month_end + timedelta(days=1)
+    month_end_datetime = timezone.make_aware(
+        datetime.combine(month_end_exclusive, datetime.min.time()),
+        local_timezone,
+    )
+
     month_qs = Event.objects.filter(
-        start_time__date__lte=month_end,
-        end_time__date__gte=month_start,
+        start_time__lt=month_end_datetime,
+        end_time__gte=month_start_datetime,
     )
     if not request.user.is_staff:
         registered_event_ids = EventMember.objects.filter(user=request.user).values_list('event_id', flat=True)
