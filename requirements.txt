@@ -1,5 +1,5 @@
-Django>=6.1,<6.2
-django-mongodb-backend>=6.1,<6.2
+Django>=5.2,<5.3
+django-mongodb-backend>=5.2,<5.3
 Pillow>=10.0
 qrcode>=7.4
 deep-translator>=1.11,<2
